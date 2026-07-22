@@ -1,0 +1,255 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrganizationStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum UserStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  REMOVED
+}
+
+enum SessionStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+model User {
+  id String @id @default(uuid())
+
+  email        String @unique
+  passwordHash String
+
+  firstName String
+  lastName  String
+
+  phone     String?
+  avatarUrl String?
+
+  emailVerified Boolean @default(false)
+  isActive      Boolean @default(true)
+
+  lastLoginAt DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  organizations OrganizationUser[]
+  sessions      Session[]
+  refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]
+  Organization  Organization[]
+
+  @@map("users")
+}
+
+model Organization {
+  id String @id @default(uuid())
+
+  name String
+  slug String @unique
+
+  logoUrl String?
+  website String?
+
+  timezone String?
+
+  status OrganizationStatus @default(ACTIVE)
+
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id])
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  users       OrganizationUser[]
+  roles       Role[]
+  invitations Invitation[]
+  auditLogs   AuditLog[]
+
+  @@map("organizations")
+}
+
+model OrganizationUser {
+  id String @id @default(uuid())
+
+  organizationId String
+  userId         String
+
+  status UserStatus @default(ACTIVE)
+
+  joinedAt  DateTime?
+  invitedBy String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+
+  roles MemberRole[]
+
+  @@unique([organizationId, userId])
+  @@map("organization_users")
+}
+
+model Role {
+  id String @id @default(uuid())
+
+  organizationId String
+
+  name        String
+  description String?
+
+  isSystem Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  permissions RolePermission[]
+  members     MemberRole[]
+
+  @@unique([organizationId, name])
+  @@map("roles")
+}
+
+model Permission {
+  id String @id @default(uuid())
+
+  module String
+  action String
+
+  key String @unique
+
+  description String?
+
+  roles RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id])
+  permission Permission @relation(fields: [permissionId], references: [id])
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model MemberRole {
+  memberId String
+  roleId   String
+
+  member OrganizationUser @relation(fields: [memberId], references: [id])
+  role   Role             @relation(fields: [roleId], references: [id])
+
+  @@id([memberId, roleId])
+  @@map("member_roles")
+}
+
+model Session {
+  id String @id @default(uuid())
+
+  userId String
+
+  device  String?
+  browser String?
+  os      String?
+
+  ipAddress String?
+  userAgent String?
+
+  status SessionStatus @default(ACTIVE)
+
+  expiresAt  DateTime
+  lastUsedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("sessions")
+}
+
+model RefreshToken {
+  id String @id @default(uuid())
+
+  userId String
+
+  tokenHash String
+
+  expiresAt DateTime
+
+  revokedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("refresh_tokens")
+}
+
+model Invitation {
+  id String @id @default(uuid())
+
+  organizationId String
+
+  email String
+
+  token String @unique
+
+  expiresAt DateTime
+
+  acceptedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@map("organization_invitations")
+}
+
+model AuditLog {
+  id String @id @default(uuid())
+
+  organizationId String?
+  userId         String?
+
+  action String
+
+  entity String
+
+  entityId String?
+
+  oldValue Json?
+  newValue Json?
+
+  ipAddress String?
+  userAgent String?
+
+  createdAt DateTime @default(now())
+
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  user         User?         @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}

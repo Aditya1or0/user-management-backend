@@ -1,12 +1,20 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { PermissionsModule } from './permissions/permissions.module';
-import { UsersModule } from './users/users.module';
-import { PrismaModule } from './prisma/prisma.module';
+import { DatabaseModule } from './database/database.module';
+import { CacheModule } from './cache/cache.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { UsersModule } from './modules/users/users.module';
+import { AuthorizationModule } from './modules/authorization/authorization.module';
 
 @Module({
-  imports: [PrismaModule, PermissionsModule, UsersModule],
+  imports: [
+    DatabaseModule,
+    CacheModule,
+    AuthModule,
+    UsersModule,
+    AuthorizationModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

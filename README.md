@@ -1,98 +1,274 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Multi-Tenant SaaS Management Engine
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A production-grade, highly scalable multi-tenant SaaS backend architecture built with NestJS, Prisma, PostgreSQL, Redis, and BullMQ.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## 🛠 Tech Stack
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- **Framework**: [NestJS](https://nestjs.com/) (TypeScript)
+- **Database & ORM**: [PostgreSQL](https://www.postgresql.org/) & [Prisma ORM](https://www.prisma.io/)
+- **Background Jobs & Queues**: [BullMQ](https://docs.bullmq.io/) & [Redis](https://redis.io/)
+- **Authentication & Security**: Bcrypt, Passport JWT
+- **Testing**: Jest & Supertest
 
-## Project setup
+---
 
-```bash
-$ pnpm install
+## 🏗 Multi-Tenant Architecture Overview
+
+This application implements a robust **row-level multi-tenant membership pattern**. A single user identity can belong to multiple distinct tenant organizations with different roles and permissions in each workspace.
+
+```mermaid
+graph TD
+    Client[HTTP Client] --> Controller[RegisterController]
+    Controller --> RegistrationSvc[RegistrationService]
+    RegistrationSvc --> PasswordSvc[PasswordService]
+    RegistrationSvc --> OrganizationRepo[OrganizationRepository]
+    RegistrationSvc --> UserRepo[UserRepository]
+    RegistrationSvc --> OrgUserRepo[OrganizationUserRepository]
+    RegistrationSvc --> RoleProvisioningSvc[RoleProvisioningService]
+    RegistrationSvc --> AuditSvc[AuditService]
+    
+    OrganizationRepo --> Database[(PostgreSQL Database)]
+    UserRepo --> Database
+    OrgUserRepo --> Database
+    RoleProvisioningSvc --> Database
+    AuditSvc --> Database
+
+    RegistrationSvc -. Post-Commit Async Job .-> MailQueueSvc[MailQueueService]
+    MailQueueSvc --> BullMQ[BullMQ Redis Queue]
+    BullMQ --> MailWorker[MailProcessor Worker]
+    MailWorker --> EmailProvider[Console / SMTP Email Provider]
+    MailWorker -. Record Sent Audit .-> AuditSvc
 ```
 
-## Compile and run the project
+### Domain Relationship Model
 
-```bash
-# development
-$ pnpm run start
-
-# watch mode
-$ pnpm run start:dev
-
-# production mode
-$ pnpm run start:prod
+```
+User (Global Identity)
+  ↓ 1:N
+OrganizationUser / Membership (Tenant-Scoped Member)
+  ↓ N:1
+Organization (Tenant Workspace)
+  ↓ 1:N
+Roles & MemberRoles (Tenant-Scoped Roles)
 ```
 
-## Run tests
+- **User**: Represents global identity (email, password hash, profile settings).
+- **Organization**: Represents an isolated tenant workspace.
+- **OrganizationUser**: Junction entity holding tenant-scoped membership state (`status`, `joinedAt`, `invitedBy`).
+- **Role**: Defined per-organization (`isSystem: true`, `key: OWNER | ADMIN | MEMBER`).
+- **MemberRole**: Connects an `OrganizationUser` membership to a specific `Role` in that organization.
 
-```bash
-# unit tests
-$ pnpm run test
+---
 
-# e2e tests
-$ pnpm run test:e2e
+## 📁 Repository Folder Structure
 
-# test coverage
-$ pnpm run test:cov
+```
+src/
+├── config/                             # Typed Application Configuration
+│   ├── app.config.ts                   # Port, ENV, Frontend/API URLs
+│   ├── auth.config.ts                  # Salt rounds, JWT secrets
+│   ├── database.config.ts              # PostgreSQL connection URL
+│   ├── mail.config.ts                  # SMTP & provider settings
+│   └── redis.config.ts                 # Redis host, port, credentials
+│
+├── common/                             # Shared Constants, Enums, Utilities
+│   ├── constants/
+│   │   ├── queue.constants.ts          # Queue names (mail-queue)
+│   │   └── roles.constants.ts          # System role definitions
+│   ├── enums/
+│   │   ├── audit-action.enum.ts        # USER_REGISTERED, EMAIL_QUEUED, etc.
+│   │   ├── audit-entity.enum.ts        # Organization, User, Email, etc.
+│   │   ├── system-role.enum.ts         # OWNER, ADMIN, MEMBER
+│   │   ├── user-status.enum.ts         # ACTIVE, INVITED, SUSPENDED
+│   │   └── organization-status.enum.ts # ACTIVE, SUSPENDED, DELETED
+│   ├── types/
+│   │   └── prisma.type.ts              # PrismaClientOrTx transaction type
+│   └── utils/
+│       └── slug.util.ts                # Base & sequential slug generator
+│
+├── mail/                               # Background Mail Subsystem
+│   ├── mail.module.ts                  # BullMQ & Mail Provider registration
+│   ├── mail-queue.service.ts           # Async mail job producer
+│   ├── mail.processor.ts               # BullMQ worker consumer
+│   └── providers/
+│       ├── email-provider.interface.ts # Decoupled Email Provider interface
+│       └── console-email.provider.ts   # Development console provider
+│
+├── modules/                            # Domain Feature Modules
+│   ├── audit/                          # Audit Logging Module
+│   │   ├── audit.module.ts
+│   │   ├── audit.service.ts
+│   │   └── repositories/audit-log.repository.ts
+│   ├── auth/                           # Authentication Module
+│   │   ├── auth.module.ts
+│   │   ├── controllers/register.controller.ts
+│   │   ├── dto/
+│   │   └── services/
+│   │       ├── auth.service.ts         # Backward-compatible facade
+│   │       ├── registration.service.ts # Registration use-case orchestrator
+│   │       ├── invitation.service.ts   # Invitation acceptance orchestrator
+│   │       └── password.service.ts     # Bcrypt password hashing
+│   ├── invitations/
+│   │   └── repositories/invitation.repository.ts
+│   ├── organizations/
+│   │   ├── services/role-provisioning.service.ts
+│   │   └── repositories/
+│   │       ├── organization.repository.ts
+│   │       └── organization-user.repository.ts
+│   ├── roles/
+│   │   └── repositories/role.repository.ts
+│   └── users/
+│       └── repositories/user.repository.ts
 ```
 
-## Deployment
+---
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+## ⚡ Key Features
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+1. **Transaction-Safe Registration Flow**:
+   - Checks for existing user identity.
+   - Hashes password securely using `PasswordService`.
+   - Generates a unique sequential slug (e.g. `acme-corporation`, `acme-corporation-1`, `acme-corporation-2`).
+   - Executes atomic database transaction creating User, Organization, Membership, System OWNER role, and Audit Log.
+   - Enqueues welcome email asynchronously AFTER successful transaction commit.
+2. **Sequential Slug Resolution**:
+   - `Acme Corporation` → `acme-corporation`
+   - Second `Acme Corporation` → `acme-corporation-1`
+   - Third `Acme Corporation` → `acme-corporation-2`
+3. **Decoupled Background Job Mail Architecture**:
+   - Registration and invitation requests return immediately without waiting for external email providers.
+   - BullMQ & Redis handle background retries with exponential backoff.
+4. **Production-Ready Audit Logging**:
+   - Audit logs are recorded for all actions: `USER_REGISTERED`, `INVITATION_ACCEPTED`, `EMAIL_QUEUED`, `EMAIL_SENT`, and `EMAIL_FAILED`.
 
-```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
+---
+
+## 🚀 Setup & Installation Instructions
+
+### 1. Prerequisites
+- Node.js `v18+` or `v20+`
+- PostgreSQL `v14+`
+- Redis `v6+`
+
+### 2. Environment Configuration
+Create a `.env` file in the root directory:
+
+```env
+# Application
+PORT=3000
+NODE_ENV=development
+FRONTEND_URL=http://localhost:3000
+API_URL=http://localhost:3000/api
+
+# Database
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/usermanagement?schema=public"
+
+# Redis & BullMQ Queue
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
+
+# Auth & Cryptography
+BCRYPT_SALT_ROUNDS=12
+JWT_SECRET=super-secret-production-key
+JWT_EXPIRES_IN=1d
+
+# Mail Settings
+MAIL_HOST=smtp.mailtrap.io
+MAIL_PORT=2525
+MAIL_USER=
+MAIL_PASS=
+MAIL_FROM=noreply@saasapp.com
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### 3. Database Migration
+Generate and apply Prisma migrations:
 
-## Resources
+```bash
+npx prisma migrate dev --name init_multi_tenant_auth
+npx prisma generate
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+### 4. Running the Application
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+```bash
+# Development mode
+npm run start:dev
 
-## Support
+# Production build & run
+npm run build
+npm run start:prod
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+---
 
-## Stay in touch
+## 🧪 Testing
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+```bash
+# Run unit tests
+npm run test
 
-## License
+# Run tests in watch mode
+npm run test:watch
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+# Test coverage report
+npm run test:cov
+```
+
+---
+
+## 📡 API Endpoints
+
+### 1. Register User & Organization
+`POST /auth/register`
+
+**Request Body:**
+```json
+{
+  "email": "owner@acme.com",
+  "password": "SecurePassword123!",
+  "firstName": "Jane",
+  "lastName": "Doe",
+  "organizationName": "Acme Corporation"
+}
+```
+
+**Response (201 Created):**
+```json
+{
+  "user": {
+    "id": "usr_123456",
+    "email": "owner@acme.com",
+    "firstName": "Jane",
+    "lastName": "Doe",
+    "isActive": true,
+    "createdAt": "2026-07-24T17:00:00.000Z"
+  },
+  "organization": {
+    "id": "org_789012",
+    "name": "Acme Corporation",
+    "slug": "acme-corporation",
+    "status": "ACTIVE"
+  }
+}
+```
+
+### 2. Accept Organization Invitation
+`POST /auth/accept-invite`
+
+**Request Body:**
+```json
+{
+  "token": "invitation-secret-token",
+  "password": "SecurePassword123!",
+  "firstName": "John",
+  "lastName": "Smith"
+}
+```
+
+---
+
+## 📄 License
+UNLICENSED - Internal SaaS Core.

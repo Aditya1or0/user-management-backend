@@ -1,6 +1,4 @@
-import { randomBytes } from 'crypto';
-
-export function generateSlug(name: string): string {
+export function generateBaseSlug(name: string): string {
   // Convert to lowercase and remove leading/trailing spaces
   let slug = name.trim().toLowerCase();
 
@@ -15,7 +13,12 @@ export function generateSlug(name: string): string {
     slug = 'organization';
   }
 
-  // Append a random 6-character hex string for entropy
-  const entropy = randomBytes(3).toString('hex');
-  return `${slug}-${entropy}`;
+  return slug;
+}
+
+export function formatSequentialSlug(baseSlug: string, counter: number): string {
+  if (counter <= 0) {
+    return baseSlug;
+  }
+  return `${baseSlug}-${counter}`;
 }

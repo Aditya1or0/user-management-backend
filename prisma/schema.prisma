@@ -7,9 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/**
- * ENUMS *
- */
+// ENUMS
 
 enum OrganizationStatus {
   ACTIVE
@@ -30,9 +28,7 @@ enum SessionStatus {
   EXPIRED
 }
 
-/**
- * MODELS *
- */
+// MODELS
 model User {
   id String @id @default(uuid())
 
@@ -147,6 +143,7 @@ model Role {
   organizationId String
 
   name        String
+  key         String?
   description String?
 
   isSystem Boolean @default(false)
@@ -160,6 +157,7 @@ model Role {
   members     MemberRole[]
 
   @@unique([organizationId, name])
+  @@unique([organizationId, key])
   @@index([organizationId, isSystem])
   @@map("roles")
 }

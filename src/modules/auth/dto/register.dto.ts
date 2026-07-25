@@ -1,5 +1,6 @@
 import {
   IsEmail,
+  IsNotEmpty,
   IsOptional,
   IsString,
   Matches,
@@ -9,11 +10,13 @@ import {
 import { Transform } from 'class-transformer';
 
 export class RegisterDto {
+  @IsNotEmpty()
   @Transform(({ value }) => value?.trim().toLowerCase())
   @IsEmail()
   @MaxLength(254)
   email: string;
 
+  @IsNotEmpty()
   @IsString()
   @MinLength(8)
   @MaxLength(128)

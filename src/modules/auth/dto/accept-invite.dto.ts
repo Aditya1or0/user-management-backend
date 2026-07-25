@@ -1,4 +1,5 @@
 import {
+  IsNotEmpty,
   IsString,
   Matches,
   MaxLength,
@@ -7,9 +8,11 @@ import {
 import { Transform } from 'class-transformer';
 
 export class AcceptInviteDto {
+  @IsNotEmpty()
   @IsString()
   token: string;
 
+  @IsNotEmpty()
   @IsString()
   @MinLength(8)
   @MaxLength(128)

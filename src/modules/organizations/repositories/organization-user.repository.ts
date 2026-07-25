@@ -1,11 +1,15 @@
 import { Injectable } from '@nestjs/common';
-import { OrganizationUser, Prisma } from '@prisma/client';
+import { Organization, OrganizationUser, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../database/database.service';
 import { PrismaClientOrTx } from '../../../common/types/prisma.type';
 
+export type OrganizationUserWithRelations = OrganizationUser & {
+  organization: Organization;
+};
+
 @Injectable()
 export class OrganizationUserRepository {
-  constructor(private readonly defaultPrisma: PrismaService) {}
+  constructor(private readonly defaultPrisma: PrismaService) { }
 
   private getClient(tx?: PrismaClientOrTx): PrismaClientOrTx {
     return tx || this.defaultPrisma;
@@ -29,7 +33,7 @@ export class OrganizationUserRepository {
   async findUserOrganizations(
     userId: string,
     tx?: PrismaClientOrTx,
-  ): Promise<OrganizationUser[]> {
+  ): Promise<OrganizationUserWithRelations[]> {
     return this.getClient(tx).organizationUser.findMany({
       where: { userId },
       include: {

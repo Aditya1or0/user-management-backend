@@ -75,7 +75,20 @@ export class InvitationService {
         tx,
       );
 
-      // 4. Create Membership with UserStatus enum
+      // 4. Resolve the inviter's OrganizationUser ID if they still belong to the organization
+      let inviterOrgUserId: string | undefined;
+      if (invitation.invitedById) {
+        const inviterMembership = await this.organizationUserRepository.findByUserAndOrganization(
+          invitation.invitedById,
+          invitation.organizationId,
+          tx,
+        );
+        if (inviterMembership) {
+          inviterOrgUserId = inviterMembership.id;
+        }
+      }
+
+      // 5. Create Membership with UserStatus enum
       const orgUser = await this.organizationUserRepository.create(
         {
           organization: { connect: { id: invitation.organizationId } },
@@ -83,8 +96,8 @@ export class InvitationService {
           email: user.email,
           status: UserStatus.ACTIVE,
           joinedAt: new Date(),
-          invitedByMember: invitation.invitedById
-            ? { connect: { id: invitation.invitedById } }
+          invitedByMember: inviterOrgUserId
+            ? { connect: { id: inviterOrgUserId } }
             : undefined,
         },
         tx,

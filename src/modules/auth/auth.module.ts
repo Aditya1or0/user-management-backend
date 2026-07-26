@@ -8,8 +8,13 @@ import { RegistrationService } from './services/registration.service';
 import { InvitationService } from './services/invitation.service';
 import { PasswordService } from './services/password.service';
 import { LoginService } from './services/login.service';
+import { PasswordResetService } from './services/password-reset.service';
+import { OtpLoginService } from './services/otp-login.service';
 import { AuthService } from './services/auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
+
+import { PasswordResetTokenRepository } from './repositories/password-reset-token.repository';
+import { LoginOtpRepository } from './repositories/login-otp.repository';
 
 import { UsersModule } from '../users/users.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
@@ -38,16 +43,24 @@ import { InvitationsModule } from '../invitations/invitations.module';
     InvitationService,
     PasswordService,
     LoginService,
+    PasswordResetService,
+    OtpLoginService,
     AuthService,
     JwtStrategy,
+    PasswordResetTokenRepository,
+    LoginOtpRepository,
   ],
   exports: [
     RegistrationService,
     InvitationService,
     PasswordService,
     LoginService,
+    PasswordResetService,
+    OtpLoginService,
     AuthService,
     JwtStrategy,
+    PasswordResetTokenRepository,
+    LoginOtpRepository,
     PassportModule,
     JwtModule,
   ],

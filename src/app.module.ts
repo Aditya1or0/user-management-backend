@@ -10,9 +10,11 @@ import { AuditModule } from './modules/audit/audit.module';
 import { UsersModule } from './modules/users/users.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { RolesModule } from './modules/roles/roles.module';
+import { PermissionsModule } from './modules/permissions/permissions.module';
 import { InvitationsModule } from './modules/invitations/invitations.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AuthorizationModule } from './modules/authorization/authorization.module';
+import { MembersModule } from './modules/members/members.module';
 import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
 
 import appConfig from './config/app.config';
@@ -37,9 +39,11 @@ import { validateEnvironment } from './config/env.validation';
     UsersModule,
     OrganizationsModule,
     RolesModule,
+    PermissionsModule,
     InvitationsModule,
     AuthModule,
     AuthorizationModule,
+    MembersModule,
   ],
   controllers: [AppController],
   providers: [

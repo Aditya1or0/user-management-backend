@@ -1,5 +1,5 @@
 import { plainToInstance } from 'class-transformer';
-import { IsEnum, IsNumber, IsOptional, IsString, validateSync } from 'class-validator';
+import { IsBoolean, IsEnum, IsNumber, IsOptional, IsString, validateSync } from 'class-validator';
 
 export enum Environment {
   Development = 'development',
@@ -35,6 +35,34 @@ class EnvironmentVariables {
   @IsNumber()
   @IsOptional()
   BCRYPT_SALT_ROUNDS: number = 12;
+
+  @IsString()
+  @IsOptional()
+  MAIL_HOST?: string;
+
+  @IsNumber()
+  @IsOptional()
+  MAIL_PORT?: number;
+
+  @IsBoolean()
+  @IsOptional()
+  MAIL_SECURE?: boolean;
+
+  @IsString()
+  @IsOptional()
+  MAIL_USER?: string;
+
+  @IsString()
+  @IsOptional()
+  MAIL_PASSWORD?: string;
+
+  @IsString()
+  @IsOptional()
+  MAIL_FROM?: string;
+
+  @IsString()
+  @IsOptional()
+  FRONTEND_URL?: string;
 }
 
 export function validateEnvironment(config: Record<string, unknown>) {

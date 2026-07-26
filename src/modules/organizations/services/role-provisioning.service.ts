@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, forwardRef } from '@nestjs/common';
 import { MemberRole, Role } from '@prisma/client';
 import { RoleRepository } from '../../roles/repositories/role.repository';
 import { PrismaClientOrTx } from '../../../common/types/prisma.type';
@@ -7,7 +7,10 @@ import { SYSTEM_ROLE_DEFINITIONS } from '../../../common/constants/roles.constan
 
 @Injectable()
 export class RoleProvisioningService {
-  constructor(private readonly roleRepository: RoleRepository) {}
+  constructor(
+    @Inject(forwardRef(() => RoleRepository))
+    private readonly roleRepository: RoleRepository,
+  ) {}
 
   /**
    * Ensures a specific system role exists for an organization.

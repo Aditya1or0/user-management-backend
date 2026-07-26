@@ -4,10 +4,9 @@ import { BullModule } from '@nestjs/bullmq';
 import { MAIL_QUEUE } from '../common/constants/queue.constants';
 import { MailQueueService } from './mail-queue.service';
 import { MailProcessor } from './mail.processor';
+import { MailService } from './mail.service';
 import { EMAIL_PROVIDER_TOKEN } from './providers/email-provider.interface';
-import { ConsoleEmailProvider } from './providers/console-email.provider';
 import { AuditModule } from '../modules/audit/audit.module';
-
 
 @Global()
 @Module({
@@ -27,13 +26,14 @@ import { AuditModule } from '../modules/audit/audit.module';
     }),
   ],
   providers: [
-    MailQueueService,  
+    MailService,
+    MailQueueService,
     MailProcessor,
     {
       provide: EMAIL_PROVIDER_TOKEN,
-      useClass: ConsoleEmailProvider,
+      useExisting: MailService,
     },
   ],
-  exports: [MailQueueService, EMAIL_PROVIDER_TOKEN],
+  exports: [MailService, MailQueueService, EMAIL_PROVIDER_TOKEN],
 })
 export class MailModule {}

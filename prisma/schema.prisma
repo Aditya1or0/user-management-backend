@@ -56,8 +56,10 @@ model User {
   memberships        OrganizationUser[]
   ownedOrganizations Organization[]     @relation("OrganizationOwner")
 
-  sessions      Session[]
-  refreshTokens RefreshToken[]
+  sessions            Session[]
+  refreshTokens       RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
+  loginOtps           LoginOtp[]
 
   auditLogs     AuditLog[]
   loginAttempts LoginAttempt[]
@@ -328,4 +330,45 @@ model AuditLog {
   @@index([organizationId, createdAt, action])
   @@index([entity, entityId, organizationId])
   @@map("audit_logs")
+}
+
+model PasswordResetToken {
+  id String @id @default(uuid())
+
+  userId String
+
+  tokenHash String? @unique
+  otpHash   String? @unique
+
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([usedAt])
+  @@map("password_reset_tokens")
+}
+
+model LoginOtp {
+  id String @id @default(uuid())
+
+  userId String
+
+  otpHash String @unique
+
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([usedAt])
+  @@map("login_otps")
 }

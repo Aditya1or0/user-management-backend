@@ -13,6 +13,16 @@ export class InvitationRepository {
     return tx || this.defaultPrisma;
   }
 
+  async findById(
+    id: string,
+    tx?: PrismaClientOrTx,
+  ): Promise<InvitationWithOrganization | null> {
+    return this.getClient(tx).invitation.findUnique({
+      where: { id },
+      include: { organization: true },
+    });
+  }
+
   async findByTokenHash(
     tokenHash: string,
     tx?: PrismaClientOrTx,
@@ -20,6 +30,37 @@ export class InvitationRepository {
     return this.getClient(tx).invitation.findUnique({
       where: { tokenHash },
       include: { organization: true },
+    });
+  }
+
+  /**
+   * Finds an active (unexpired, unaccepted, unrevoked) invitation for an email in an organization.
+   */
+  async findActiveInvitation(
+    organizationId: string,
+    email: string,
+    tx?: PrismaClientOrTx,
+  ): Promise<Invitation | null> {
+    return this.getClient(tx).invitation.findFirst({
+      where: {
+        organizationId,
+        email: email.trim().toLowerCase(),
+        acceptedAt: null,
+        revokedAt: null,
+        expiresAt: {
+          gt: new Date(),
+        },
+      },
+    });
+  }
+
+  /**
+   * Marks an invitation as revoked by setting revokedAt = new Date().
+   */
+  async revoke(id: string, tx?: PrismaClientOrTx): Promise<Invitation> {
+    return this.getClient(tx).invitation.update({
+      where: { id },
+      data: { revokedAt: new Date() },
     });
   }
 

@@ -8,4 +8,9 @@ export default registerAs('auth', () => ({
   passwordResetExpiresInMinutes: parseInt(process.env.PASSWORD_RESET_EXPIRES_IN_MINUTES || '60', 10),
   otpExpiresInMinutes: parseInt(process.env.OTP_EXPIRES_IN_MINUTES || '10', 10),
   loginOtpExpiresInMinutes: parseInt(process.env.LOGIN_OTP_EXPIRES_IN_MINUTES || '10', 10),
+  jwtAccessTokenExpiresIn: process.env.JWT_ACCESS_TOKEN_EXPIRES_IN || '15m',
+  refreshTokenExpiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || '30d',
+  refreshCookieName: process.env.AUTH_REFRESH_COOKIE_NAME || 'refresh_token',
+  cookieSecure: process.env.AUTH_COOKIE_SECURE === 'true',
+  cookieSameSite: (process.env.AUTH_COOKIE_SAME_SITE || 'lax') as 'lax' | 'strict' | 'none',
 }));

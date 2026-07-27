@@ -1,5 +1,6 @@
 export class RoleResponseDto {
   id: string;
+  publicSlug: string;
   name: string;
   key: string | null;
   description: string | null;
@@ -20,6 +21,7 @@ export class RoleResponseDto {
 
   constructor(role: any) {
     this.id = role.id;
+    this.publicSlug = role.publicSlug;
     this.name = role.name;
     this.key = role.key ?? null;
     this.description = role.description ?? null;

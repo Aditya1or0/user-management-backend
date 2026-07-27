@@ -187,4 +187,86 @@ export class RolesService {
 
     return { message: `Role '${existing.name}' was successfully deleted.` };
   }
+
+  async getRoleBySlug(publicSlug: string, organizationId: string): Promise<RoleResponseDto> {
+    const role = await this.roleRepository.findBySlug(organizationId, publicSlug);
+    if (!role) {
+      throw new NotFoundException(`Role was not found in this organization.`);
+    }
+
+    return new RoleResponseDto(role);
+  }
+
+  async updateRoleBySlug(
+    publicSlug: string,
+    organizationId: string,
+    dto: UpdateRoleDto,
+  ): Promise<RoleResponseDto> {
+    const existing = await this.roleRepository.findBySlug(organizationId, publicSlug);
+    if (!existing) {
+      throw new NotFoundException(`Role was not found in this organization.`);
+    }
+
+    if (dto.name && dto.name.trim() !== existing.name) {
+      const nameConflict = await this.roleRepository.findByName(
+        organizationId,
+        dto.name.trim(),
+      );
+      if (nameConflict && nameConflict.id !== existing.id) {
+        throw new ConflictException(
+          `Role name '${dto.name.trim()}' is already used in this organization.`,
+        );
+      }
+    }
+
+    if (existing.isSystem) {
+      if (dto.name && dto.name.trim() !== existing.name) {
+        throw new ForbiddenException('Protected system role names cannot be renamed.');
+      }
+      if (dto.key && dto.key.toLowerCase().trim() !== existing.key) {
+        throw new ForbiddenException('Protected system role keys cannot be modified.');
+      }
+    }
+
+    if (dto.permissionIds) {
+      await this.validatePermissionIds(dto.permissionIds);
+    }
+
+    const updated = await this.roleRepository.updateWithPermissions(
+      existing.id,
+      organizationId,
+      {
+        name: dto.name ? dto.name.trim() : undefined,
+        key: dto.key ? dto.key.toLowerCase().trim() : undefined,
+        description: dto.description !== undefined ? dto.description.trim() : undefined,
+      },
+      dto.permissionIds,
+    );
+
+    await this.cacheService.deleteByPattern('auth:perms:*');
+    return new RoleResponseDto(updated);
+  }
+
+  async deleteRoleBySlug(publicSlug: string, organizationId: string): Promise<{ message: string }> {
+    const existing = await this.roleRepository.findBySlug(organizationId, publicSlug);
+    if (!existing) {
+      throw new NotFoundException(`Role was not found in this organization.`);
+    }
+
+    if (existing.isSystem) {
+      throw new ForbiddenException('Default system roles cannot be deleted.');
+    }
+
+    const assignedUsersCount = existing._count?.members || 0;
+    if (assignedUsersCount > 0) {
+      throw new ConflictException(
+        `Cannot delete role '${existing.name}' because it is assigned to ${assignedUsersCount} active member(s). Reassign these members first.`,
+      );
+    }
+
+    await this.roleRepository.deleteRole(existing.id, organizationId);
+    await this.cacheService.deleteByPattern('auth:perms:*');
+
+    return { message: `Role '${existing.name}' was successfully deleted.` };
+  }
 }

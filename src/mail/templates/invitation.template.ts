@@ -34,12 +34,12 @@ export function renderInvitationTemplate(data: InvitationEmailData): { subject: 
 <body>
   <div class="container">
     <div class="header">
-      <div class="logo">⚡ Nimbus Access Console</div>
+      <div class="logo">⚡ KeyMaster</div>
     </div>
     <div class="content">
       <h1 class="title">Workspace Invitation</h1>
       <p class="text">Hello,</p>
-      <p class="text"><strong>${inviter}</strong> has invited you to join the <strong>${org}</strong> workspace on Nimbus Access Console.</p>
+      <p class="text"><strong>${inviter}</strong> has invited you to join the <strong>${org}</strong> workspace on KeyMaster.</p>
       
       <div class="highlight-box">
         <p class="highlight-text"><strong>Organization:</strong> ${org}</p>

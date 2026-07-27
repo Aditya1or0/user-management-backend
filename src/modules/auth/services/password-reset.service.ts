@@ -11,6 +11,7 @@ import { PasswordResetTokenRepository } from '../repositories/password-reset-tok
 import { PasswordService } from './password.service';
 import { AuditService } from '../../audit/audit.service';
 import { MailQueueService } from '../../../mail/mail-queue.service';
+import { TokenService } from './token.service';
 import { ForgotPasswordDto } from '../dto/forgot-password.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { ResetPasswordOtpDto } from '../dto/reset-password-otp.dto';
@@ -28,6 +29,7 @@ export class PasswordResetService {
     private readonly userRepository: UserRepository,
     private readonly passwordResetTokenRepository: PasswordResetTokenRepository,
     private readonly passwordService: PasswordService,
+    private readonly tokenService: TokenService,
     private readonly auditService: AuditService,
     private readonly mailQueueService: MailQueueService,
   ) {}
@@ -134,6 +136,9 @@ export class PasswordResetService {
       );
     });
 
+    // Revoke all existing sessions and refresh tokens after successful reset
+    await this.tokenService.revokeAllUserSessions(user.id);
+
     return { message: 'Password has been reset successfully.' };
   }
 
@@ -175,6 +180,10 @@ export class PasswordResetService {
       );
     });
 
+    // Revoke all existing sessions and refresh tokens after successful reset
+    await this.tokenService.revokeAllUserSessions(user.id);
+
     return { message: 'Password has been reset successfully.' };
   }
 }
+

@@ -33,6 +33,7 @@ model User {
   id String @id @default(uuid())
 
   email        String @unique
+  publicSlug   String @unique
   passwordHash String
 
   firstName String
@@ -145,6 +146,7 @@ model Role {
   organizationId String
 
   name        String
+  publicSlug  String @unique
   key         String?
   description String?
 

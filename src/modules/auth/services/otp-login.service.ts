@@ -4,13 +4,13 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../../database/database.service';
 import { UserRepository } from '../../users/repositories/user.repository';
 import { OrganizationUserRepository } from '../../organizations/repositories/organization-user.repository';
 import { LoginOtpRepository } from '../repositories/login-otp.repository';
 import { AuditService } from '../../audit/audit.service';
 import { MailQueueService } from '../../../mail/mail-queue.service';
+import { TokenService } from './token.service';
 import { SendLoginOtpDto } from '../dto/send-login-otp.dto';
 import { LoginOtpDto } from '../dto/login-otp.dto';
 import { LoginResponseDto } from '../dto/login-response.dto';
@@ -18,6 +18,7 @@ import { hashToken } from '../../../common/utils/hash.util';
 import { UserStatus } from '../../../common/enums/user-status.enum';
 import { AuditAction } from '../../../common/enums/audit-action.enum';
 import { AuditEntity } from '../../../common/enums/audit-entity.enum';
+import { SessionContext } from '../../../common/types/session-context.interface';
 
 @Injectable()
 export class OtpLoginService {
@@ -29,7 +30,7 @@ export class OtpLoginService {
     private readonly userRepository: UserRepository,
     private readonly organizationUserRepository: OrganizationUserRepository,
     private readonly loginOtpRepository: LoginOtpRepository,
-    private readonly jwtService: JwtService,
+    private readonly tokenService: TokenService,
     private readonly auditService: AuditService,
     private readonly mailQueueService: MailQueueService,
   ) {}
@@ -88,7 +89,7 @@ export class OtpLoginService {
     return genericResponse;
   }
 
-  async loginWithOtp(dto: LoginOtpDto): Promise<LoginResponseDto> {
+  async loginWithOtp(dto: LoginOtpDto, context: SessionContext): Promise<LoginResponseDto> {
     const normalizedEmail = dto.email.trim().toLowerCase();
     const otp = dto.otp.trim();
 
@@ -147,20 +148,21 @@ export class OtpLoginService {
       );
     });
 
-    // 6. Generate JWT Token
-    const payload = { sub: user.id, email: user.email };
-    const accessToken = await this.jwtService.signAsync(payload);
-
-    // 7. Format clean DTO response
     const activeOrganizations = memberships.map((m) => ({
       id: m.organization.id,
       name: m.organization.name,
       slug: m.organization.slug,
       status: m.organization.status,
     }));
+    const organizationId = activeOrganizations.length > 0 ? activeOrganizations[0].id : undefined;
 
+    // 6. Generate Session and Tokens via TokenService
+    const { accessToken, refreshToken } = await this.tokenService.createSessionTokens(user, context, organizationId);
+
+    // 7. Format clean DTO response
     return {
       accessToken,
+      refreshToken,
       user: {
         id: user.id,
         email: user.email,
@@ -174,3 +176,4 @@ export class OtpLoginService {
     };
   }
 }
+

@@ -15,6 +15,7 @@ import { MemberResponseDto } from '../dto/member-response.dto';
 import { PaginatedResponseDto } from '../../../common/dto/paginated-response.dto';
 import { UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { generatePublicSlug } from '../../../common/utils/slug.util';
 
 @Injectable()
 export class MembersService {
@@ -41,6 +42,14 @@ export class MembersService {
 
   async findOne(memberId: string, organizationId: string): Promise<MemberResponseDto> {
     const member = await this.memberRepository.findById(memberId, organizationId);
+    if (!member) {
+      throw new NotFoundException('Member not found in this organization.');
+    }
+    return MemberResponseDto.from(member);
+  }
+
+  async findOneBySlug(publicSlug: string, organizationId: string): Promise<MemberResponseDto> {
+    const member = await this.memberRepository.findByUserSlug(publicSlug, organizationId);
     if (!member) {
       throw new NotFoundException('Member not found in this organization.');
     }
@@ -82,6 +91,7 @@ export class MembersService {
         user = await tx.user.create({
           data: {
             email,
+            publicSlug: generatePublicSlug(`${dto.firstName} ${dto.lastName}`),
             firstName: dto.firstName,
             lastName: dto.lastName,
             passwordHash: tempPasswordHash,
@@ -104,6 +114,7 @@ export class MembersService {
           user: {
             select: {
               id: true,
+              publicSlug: true,
               firstName: true,
               lastName: true,
               avatarUrl: true,
@@ -127,6 +138,7 @@ export class MembersService {
           user: {
             select: {
               id: true,
+              publicSlug: true,
               firstName: true,
               lastName: true,
               avatarUrl: true,
@@ -155,6 +167,31 @@ export class MembersService {
     if (!member) {
       throw new NotFoundException('Member not found in this organization.');
     }
+    return this._performUpdate(member, organizationId, dto, requestingUserId, organization);
+  }
+
+  async updateBySlug(
+    publicSlug: string,
+    organizationId: string,
+    dto: UpdateMemberDto,
+    requestingUserId: string,
+    organization: any,
+  ): Promise<MemberResponseDto> {
+    const member = await this.memberRepository.findByUserSlug(publicSlug, organizationId);
+    if (!member) {
+      throw new NotFoundException('Member not found in this organization.');
+    }
+    return this._performUpdate(member, organizationId, dto, requestingUserId, organization);
+  }
+
+  private async _performUpdate(
+    member: any,
+    organizationId: string,
+    dto: UpdateMemberDto,
+    requestingUserId: string,
+    organization: any,
+  ): Promise<MemberResponseDto> {
+    const memberId = member.id;
 
     // Protect the organization owner from status changes
     if (
@@ -216,7 +253,28 @@ export class MembersService {
     if (!member) {
       throw new NotFoundException('Member not found in this organization.');
     }
+    await this._performRemove(member, organizationId, requestingUserId, organization);
+  }
 
+  async removeBySlug(
+    publicSlug: string,
+    organizationId: string,
+    requestingUserId: string,
+    organization: any,
+  ): Promise<void> {
+    const member = await this.memberRepository.findByUserSlug(publicSlug, organizationId);
+    if (!member) {
+      throw new NotFoundException('Member not found in this organization.');
+    }
+    await this._performRemove(member, organizationId, requestingUserId, organization);
+  }
+
+  private async _performRemove(
+    member: any,
+    organizationId: string,
+    requestingUserId: string,
+    organization: any,
+  ): Promise<void> {
     if (organization.ownerId === member.userId) {
       throw new ForbiddenException('The organization owner cannot be removed.');
     }
@@ -225,7 +283,7 @@ export class MembersService {
       throw new BadRequestException('You cannot remove yourself from the organization.');
     }
 
-    await this.memberRepository.remove(memberId, organizationId);
+    await this.memberRepository.remove(member.id, organizationId);
     await this.cacheService.delete(`auth:perms:${organizationId}:${member.userId}`);
   }
 

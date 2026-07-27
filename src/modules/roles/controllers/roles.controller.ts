@@ -45,13 +45,13 @@ export class RolesController {
     return this.rolesService.getPermissionMatrix();
   }
 
-  @Get(':id')
+  @Get(':slug')
   @RequirePermissions('roles:read')
-  async getRoleById(
+  async getRoleBySlug(
     @CurrentOrgId() orgId: string,
-    @Param('id') id: string,
+    @Param('slug') slug: string,
   ): Promise<RoleResponseDto> {
-    return this.rolesService.getRoleById(id, orgId);
+    return this.rolesService.getRoleBySlug(slug, orgId);
   }
 
   @Post()
@@ -64,33 +64,33 @@ export class RolesController {
     return this.rolesService.createRole(orgId, dto);
   }
 
-  @Patch(':id')
+  @Patch(':slug')
   @RequirePermissions('roles:update')
   async updateRole(
     @CurrentOrgId() orgId: string,
-    @Param('id') id: string,
+    @Param('slug') slug: string,
     @Body() dto: UpdateRoleDto,
   ): Promise<RoleResponseDto> {
-    return this.rolesService.updateRole(id, orgId, dto);
+    return this.rolesService.updateRoleBySlug(slug, orgId, dto);
   }
 
-  @Put(':id')
+  @Put(':slug')
   @RequirePermissions('roles:update')
   async replaceRole(
     @CurrentOrgId() orgId: string,
-    @Param('id') id: string,
+    @Param('slug') slug: string,
     @Body() dto: UpdateRoleDto,
   ): Promise<RoleResponseDto> {
-    return this.rolesService.updateRole(id, orgId, dto);
+    return this.rolesService.updateRoleBySlug(slug, orgId, dto);
   }
 
-  @Delete(':id')
+  @Delete(':slug')
   @HttpCode(HttpStatus.OK)
   @RequirePermissions('roles:delete')
   async deleteRole(
     @CurrentOrgId() orgId: string,
-    @Param('id') id: string,
+    @Param('slug') slug: string,
   ): Promise<{ message: string }> {
-    return this.rolesService.deleteRole(id, orgId);
+    return this.rolesService.deleteRoleBySlug(slug, orgId);
   }
 }

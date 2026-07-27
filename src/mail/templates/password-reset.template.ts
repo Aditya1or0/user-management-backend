@@ -39,7 +39,7 @@ export function renderPasswordResetTemplate(data: PasswordResetEmailData): { sub
 <body>
   <div class="container">
     <div class="header">
-      <div class="logo">⚡ Nimbus Access Console</div>
+      <div class="logo">⚡ KeyMaster</div>
     </div>
     <div class="content">
       <h1 class="title">Password Reset Request</h1>
@@ -62,7 +62,7 @@ export function renderPasswordResetTemplate(data: PasswordResetEmailData): { sub
       </div>
     </div>
     <div class="footer">
-      <p style="margin: 0 0 8px;">Automated security notification from Nimbus Access Console.</p>
+      <p style="margin: 0 0 8px;">Automated security notification from KeyMaster.</p>
       <p style="margin: 0;">&copy; ${new Date().getFullYear()} Nimbus Inc. All rights reserved.</p>
     </div>
   </div>

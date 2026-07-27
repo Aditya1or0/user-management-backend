@@ -40,12 +40,15 @@ export class MailService implements OnModuleInit, IEmailProvider {
   async onModuleInit(): Promise<void> {
     const user = this.configService.get<string>('mail.user') || process.env.MAIL_USER;
     if (user && process.env.NODE_ENV !== 'test') {
-      try {
-        await this.transporter.verify();
-        this.logger.log('Nodemailer transporter SMTP connection verified successfully.');
-      } catch (error) {
-        this.logger.warn(`SMTP verification failed on startup: ${error instanceof Error ? error.message : error}`);
-      }
+      // Run verify asynchronously in the background to prevent blocking server bootstrap
+      this.transporter
+        .verify()
+        .then(() => {
+          this.logger.log('Nodemailer transporter SMTP connection verified successfully.');
+        })
+        .catch((error) => {
+          this.logger.warn(`SMTP verification failed on startup: ${error instanceof Error ? error.message : error}`);
+        });
     }
   }
 
@@ -106,7 +109,7 @@ export class MailService implements OnModuleInit, IEmailProvider {
     const text = `Your 6-digit Login OTP is: ${data.otp}`;
     const html = `
       <div style="font-family: sans-serif; padding: 20px; background-color: #09090b; color: #f4f4f5; border-radius: 8px;">
-        <h2 style="color: #06b6d4;">Nimbus Access Console</h2>
+        <h2 style="color: #06b6d4;">KeyMaster</h2>
         <p>Your 6-digit Login OTP Code is:</p>
         <div style="font-family: monospace; font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #06b6d4; margin: 20px 0;">
           ${data.otp}

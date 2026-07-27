@@ -10,6 +10,7 @@ const MEMBER_INCLUDE = {
   user: {
     select: {
       id: true,
+      publicSlug: true,
       firstName: true,
       lastName: true,
       avatarUrl: true,
@@ -111,6 +112,20 @@ export class MemberRepository {
     return this.getClient(tx).organizationUser.findUnique({
       where: {
         organizationId_userId: { organizationId, userId },
+      },
+      include: MEMBER_INCLUDE,
+    });
+  }
+
+  async findByUserSlug(
+    publicSlug: string,
+    organizationId: string,
+    tx?: PrismaClientOrTx,
+  ): Promise<any | null> {
+    return this.getClient(tx).organizationUser.findFirst({
+      where: { 
+        organizationId,
+        user: { publicSlug }
       },
       include: MEMBER_INCLUDE,
     });

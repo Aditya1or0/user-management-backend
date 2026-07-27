@@ -43,16 +43,16 @@ export class MembersController {
   }
 
   /**
-   * GET /members/:id
-   * Get single member detail by membership record ID.
+   * GET /members/:slug
+   * Get single member detail by User publicSlug.
    */
-  @Get(':id')
+  @Get(':slug')
   @RequirePermissions('members:read')
   findOne(
-    @Param('id') id: string,
+    @Param('slug') slug: string,
     @CurrentOrgId() orgId: string,
   ) {
-    return this.membersService.findOne(id, orgId);
+    return this.membersService.findOneBySlug(slug, orgId);
   }
 
   /**
@@ -71,35 +71,35 @@ export class MembersController {
   }
 
   /**
-   * PATCH /members/:id
+   * PATCH /members/:slug
    * Update member status and/or role assignments.
    */
-  @Patch(':id')
+  @Patch(':slug')
   @RequirePermissions('members:update')
   update(
-    @Param('id') id: string,
+    @Param('slug') slug: string,
     @CurrentOrgId() orgId: string,
     @Body() dto: UpdateMemberDto,
     @CurrentUser() user: AuthenticatedUser,
     @CurrentOrganization() organization: any,
   ) {
-    return this.membersService.update(id, orgId, dto, user.id, organization);
+    return this.membersService.updateBySlug(slug, orgId, dto, user.id, organization);
   }
 
   /**
-   * DELETE /members/:id
+   * DELETE /members/:slug
    * Remove a member from the organization.
    * Cannot remove the organization owner.
    */
-  @Delete(':id')
+  @Delete(':slug')
   @RequirePermissions('members:delete')
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(
-    @Param('id') id: string,
+    @Param('slug') slug: string,
     @CurrentOrgId() orgId: string,
     @CurrentUser() user: AuthenticatedUser,
     @CurrentOrganization() organization: any,
   ) {
-    return this.membersService.remove(id, orgId, user.id, organization);
+    return this.membersService.removeBySlug(slug, orgId, user.id, organization);
   }
 }

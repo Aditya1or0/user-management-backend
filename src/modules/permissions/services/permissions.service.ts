@@ -38,7 +38,16 @@ export class PermissionsService {
   }
 
   async getPermissionMeta(): Promise<{ modules: string[]; actions: string[] }> {
-    return this.permissionRepository.getAvailableModulesAndActions();
+    const cacheKey = 'auth:perms:meta';
+    const cached = await this.cacheService.get<{ modules: string[]; actions: string[] }>(cacheKey);
+    
+    if (cached) {
+      return cached;
+    }
+
+    const meta = await this.permissionRepository.getAvailableModulesAndActions();
+    await this.cacheService.set(cacheKey, meta, 3600);
+    return meta;
   }
 
   async getPermissionById(id: string): Promise<PermissionResponseDto> {

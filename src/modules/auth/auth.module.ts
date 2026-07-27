@@ -11,10 +11,13 @@ import { LoginService } from './services/login.service';
 import { PasswordResetService } from './services/password-reset.service';
 import { OtpLoginService } from './services/otp-login.service';
 import { AuthService } from './services/auth.service';
+import { TokenService } from './services/token.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
 import { PasswordResetTokenRepository } from './repositories/password-reset-token.repository';
 import { LoginOtpRepository } from './repositories/login-otp.repository';
+import { SessionRepository } from './repositories/session.repository';
+import { RefreshTokenRepository } from './repositories/refresh-token.repository';
 
 import { UsersModule } from '../users/users.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
@@ -31,7 +34,7 @@ import { InvitationsModule } from '../invitations/invitations.module';
       useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>('auth.jwtSecret') || 'aditya-jwt',
         signOptions: {
-          expiresIn: (configService.get<string>('auth.jwtExpiresIn') || '1d') as any,
+          expiresIn: (configService.get<string>('auth.jwtAccessTokenExpiresIn') || '15m') as any,
         },
       }),
       inject: [ConfigService],
@@ -46,9 +49,12 @@ import { InvitationsModule } from '../invitations/invitations.module';
     PasswordResetService,
     OtpLoginService,
     AuthService,
+    TokenService,
     JwtStrategy,
     PasswordResetTokenRepository,
     LoginOtpRepository,
+    SessionRepository,
+    RefreshTokenRepository,
   ],
   exports: [
     RegistrationService,
@@ -58,9 +64,12 @@ import { InvitationsModule } from '../invitations/invitations.module';
     PasswordResetService,
     OtpLoginService,
     AuthService,
+    TokenService,
     JwtStrategy,
     PasswordResetTokenRepository,
     LoginOtpRepository,
+    SessionRepository,
+    RefreshTokenRepository,
     PassportModule,
     JwtModule,
   ],

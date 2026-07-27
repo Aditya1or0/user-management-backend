@@ -13,6 +13,9 @@ export class MemberResponseDto {
 
   /** Global User.id */
   userId: string;
+  
+  /** Public unique identifier for URLs */
+  publicSlug: string;
 
   email: string;
   firstName: string;
@@ -52,6 +55,7 @@ export class MemberResponseDto {
     return {
       id: orgUser.id,
       userId: user.id,
+      publicSlug: user.publicSlug,
       email: orgUser.email,
       firstName: user.firstName,
       lastName: user.lastName,

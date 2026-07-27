@@ -31,7 +31,7 @@ export function renderWelcomeTemplate(data: WelcomeEmailData): { subject: string
 <body>
   <div class="container">
     <div class="header">
-      <div class="logo">⚡ Nimbus Access Console</div>
+      <div class="logo">⚡ KeyMaster</div>
     </div>
     <div class="content">
       <h1 class="title">Welcome aboard, ${name}!</h1>
@@ -59,7 +59,7 @@ export function renderWelcomeTemplate(data: WelcomeEmailData): { subject: string
   `;
 
   const text = `Welcome aboard, ${name}!\n\n` +
-    `Your workspace account on Nimbus Access Console has been successfully created.\n` +
+    `Your workspace account on KeyMaster has been successfully created.\n` +
     (data.organizationName ? `Organization: ${data.organizationName}\n\n` : '\n') +
     `Access your dashboard here:\n${data.loginUrl}`;
 

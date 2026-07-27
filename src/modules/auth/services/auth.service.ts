@@ -14,6 +14,7 @@ import { SendLoginOtpDto } from '../dto/send-login-otp.dto';
 import { LoginOtpDto } from '../dto/login-otp.dto';
 import { AuthResponseDto } from '../dto/auth-response.dto';
 import { LoginResponseDto } from '../dto/login-response.dto';
+import { SessionContext } from '../../../common/types/session-context.interface';
 
 @Injectable()
 export class AuthService {
@@ -33,8 +34,8 @@ export class AuthService {
     return this.invitationService.acceptInvite(dto);
   }
 
-  async login(dto: LoginDto): Promise<LoginResponseDto> {
-    return this.loginService.login(dto);
+  async login(dto: LoginDto, context: SessionContext): Promise<LoginResponseDto> {
+    return this.loginService.login(dto, context);
   }
 
   async forgotPassword(dto: ForgotPasswordDto): Promise<{ message: string }> {
@@ -53,7 +54,7 @@ export class AuthService {
     return this.otpLoginService.sendLoginOtp(dto);
   }
 
-  async loginWithOtp(dto: LoginOtpDto): Promise<LoginResponseDto> {
-    return this.otpLoginService.loginWithOtp(dto);
+  async loginWithOtp(dto: LoginOtpDto, context: SessionContext): Promise<LoginResponseDto> {
+    return this.otpLoginService.loginWithOtp(dto, context);
   }
 }

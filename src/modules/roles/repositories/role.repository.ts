@@ -4,6 +4,7 @@ import { PrismaService } from '../../../database/database.service';
 import { PrismaClientOrTx } from '../../../common/types/prisma.type';
 import { RoleQueryDto } from '../dto/role-query.dto';
 import { PermissionMatrixModuleDto } from '../dto/role-matrix-response.dto';
+import { generatePublicSlug } from '../../../common/utils/slug.util';
 
 const ALLOWED_ROLE_SORT_FIELDS = ['name', 'key', 'createdAt', 'isSystem'];
 
@@ -40,6 +41,32 @@ export class RoleRepository {
         organizationId_name: {
           organizationId,
           name,
+        },
+      },
+    });
+  }
+
+  async findBySlug(
+    organizationId: string,
+    publicSlug: string,
+    tx?: PrismaClientOrTx,
+  ): Promise<any | null> {
+    return this.getClient(tx).role.findUnique({
+      where: {
+        publicSlug,
+        organizationId,
+      },
+      include: {
+        permissions: {
+          include: {
+            permission: true,
+          },
+        },
+        _count: {
+          select: {
+            members: true,
+            permissions: true,
+          },
         },
       },
     });
@@ -166,7 +193,13 @@ export class RoleRepository {
     data: Prisma.RoleCreateInput,
     tx?: PrismaClientOrTx,
   ): Promise<Role> {
-    return this.getClient(tx).role.create({ data });
+    const publicSlug = data.publicSlug || generatePublicSlug(data.name);
+    return this.getClient(tx).role.create({ 
+      data: {
+        ...data,
+        publicSlug
+      }
+    });
   }
 
   async createWithPermissions(
@@ -182,6 +215,7 @@ export class RoleRepository {
         data: {
           organization: { connect: { id: organizationId } },
           name: data.name,
+          publicSlug: generatePublicSlug(data.name),
           key: data.key || null,
           description: data.description || null,
           isSystem: false,

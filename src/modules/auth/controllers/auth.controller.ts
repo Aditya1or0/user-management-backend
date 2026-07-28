@@ -1,4 +1,15 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, Res, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Patch,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
@@ -12,6 +23,7 @@ import { RegisterDto } from '../dto/register.dto';
 import { ResetPasswordOtpDto } from '../dto/reset-password-otp.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { SendLoginOtpDto } from '../dto/send-login-otp.dto';
+import { UpdateProfileDto } from '../dto/update-profile.dto';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { InvitationService } from '../services/invitation.service';
 import { LoginService } from '../services/login.service';
@@ -21,6 +33,9 @@ import { RegistrationService } from '../services/registration.service';
 import { TokenService } from '../services/token.service';
 import { AuthCookieService } from '../services/auth-cookie.service';
 import { createSessionContext } from '../../../common/utils/session-context.util';
+import { UserRepository } from '../../users/repositories/user.repository';
+import { OrganizationUserRepository } from '../../organizations/repositories/organization-user.repository';
+import { PermissionResolutionService } from '../../authorization/services/permission-resolution.service';
 
 @Controller('auth')
 export class AuthController {
@@ -33,6 +48,9 @@ export class AuthController {
     private readonly tokenService: TokenService,
     private readonly configService: ConfigService,
     private readonly authCookieService: AuthCookieService,
+    private readonly userRepository: UserRepository,
+    private readonly organizationUserRepository: OrganizationUserRepository,
+    private readonly permissionResolutionService: PermissionResolutionService,
   ) {}
 
   @Post('register')
@@ -49,10 +67,14 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  async login(@Req() req: Request, @Res({ passthrough: true }) res: Response, @Body() dto: LoginDto) {
+  async login(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+    @Body() dto: LoginDto,
+  ) {
     const context = createSessionContext(req);
     const result = await this.loginService.login(dto, context);
-    
+
     if (result.refreshToken) {
       this.authCookieService.setRefreshTokenCookie(res, result.refreshToken);
     }
@@ -63,34 +85,46 @@ export class AuthController {
 
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
-  async forgotPassword(@Body() dto: ForgotPasswordDto): Promise<{ message: string }> {
+  async forgotPassword(
+    @Body() dto: ForgotPasswordDto,
+  ): Promise<{ message: string }> {
     return this.passwordResetService.forgotPassword(dto);
   }
 
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
-  async resetPassword(@Body() dto: ResetPasswordDto): Promise<{ message: string }> {
+  async resetPassword(
+    @Body() dto: ResetPasswordDto,
+  ): Promise<{ message: string }> {
     return this.passwordResetService.resetPasswordWithToken(dto);
   }
 
   @Post('reset-password-otp')
   @HttpCode(HttpStatus.OK)
-  async resetPasswordWithOtp(@Body() dto: ResetPasswordOtpDto): Promise<{ message: string }> {
+  async resetPasswordWithOtp(
+    @Body() dto: ResetPasswordOtpDto,
+  ): Promise<{ message: string }> {
     return this.passwordResetService.resetPasswordWithOtp(dto);
   }
 
   @Post('send-login-otp')
   @HttpCode(HttpStatus.OK)
-  async sendLoginOtp(@Body() dto: SendLoginOtpDto): Promise<{ message: string }> {
+  async sendLoginOtp(
+    @Body() dto: SendLoginOtpDto,
+  ): Promise<{ message: string }> {
     return this.otpLoginService.sendLoginOtp(dto);
   }
 
   @Post('login-otp')
   @HttpCode(HttpStatus.OK)
-  async loginWithOtp(@Req() req: Request, @Res({ passthrough: true }) res: Response, @Body() dto: LoginOtpDto) {
+  async loginWithOtp(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+    @Body() dto: LoginOtpDto,
+  ) {
     const context = createSessionContext(req);
     const result = await this.otpLoginService.loginWithOtp(dto, context);
-    
+
     if (result.refreshToken) {
       this.authCookieService.setRefreshTokenCookie(res, result.refreshToken);
     }
@@ -101,16 +135,26 @@ export class AuthController {
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const cookieName = this.configService.getOrThrow<string>('auth.refreshCookieName');
+  async refresh(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const cookieName = this.configService.getOrThrow<string>(
+      'auth.refreshCookieName',
+    );
     const rawRefreshToken = req.cookies?.[cookieName];
 
     if (!rawRefreshToken) {
-      return res.status(HttpStatus.UNAUTHORIZED).json({ message: 'Refresh token missing.' });
+      return res
+        .status(HttpStatus.UNAUTHORIZED)
+        .json({ message: 'Refresh token missing.' });
     }
 
     const context = createSessionContext(req);
-    const result = await this.tokenService.refreshTokens(rawRefreshToken, context);
+    const result = await this.tokenService.refreshTokens(
+      rawRefreshToken,
+      context,
+    );
 
     this.authCookieService.setRefreshTokenCookie(res, result.refreshToken);
 
@@ -120,7 +164,9 @@ export class AuthController {
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const cookieName = this.configService.getOrThrow<string>('auth.refreshCookieName');
+    const cookieName = this.configService.getOrThrow<string>(
+      'auth.refreshCookieName',
+    );
     const rawRefreshToken = req.cookies?.[cookieName];
 
     if (rawRefreshToken) {
@@ -134,7 +180,10 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Post('logout-all')
   @HttpCode(HttpStatus.OK)
-  async logoutAll(@CurrentUser() user: AuthenticatedUser, @Res({ passthrough: true }) res: Response) {
+  async logoutAll(
+    @CurrentUser() user: AuthenticatedUser,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     await this.tokenService.revokeAllUserSessions(user.id);
     this.authCookieService.clearRefreshTokenCookie(res);
     return { message: 'All sessions logged out successfully.' };
@@ -142,8 +191,89 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Get('me')
-  async getProfile(@CurrentUser() user: AuthenticatedUser): Promise<AuthenticatedUser> {
-    return user;
+  async getProfile(
+    @CurrentUser() authUser: AuthenticatedUser,
+    @Req() req: Request,
+  ) {
+    const dbUser = await this.userRepository.findById(authUser.id);
+    if (!dbUser) {
+      return authUser;
+    }
+
+    const requestedOrgId = req.headers['x-organization-id'] as
+      string | undefined;
+    const memberships =
+      await this.organizationUserRepository.findUserOrganizations(authUser.id);
+
+    let activeOrgId = requestedOrgId;
+    if (
+      !activeOrgId ||
+      !memberships.some((m) => m.organizationId === activeOrgId)
+    ) {
+      activeOrgId =
+        memberships.length > 0 ? memberships[0].organizationId : undefined;
+    }
+
+    let permissions: string[] = [];
+    let roles: string[] = [];
+
+    if (activeOrgId) {
+      permissions =
+        await this.permissionResolutionService.getGrantedPermissionKeys(
+          authUser.id,
+          activeOrgId,
+        );
+      const member = memberships.find((m) => m.organizationId === activeOrgId);
+      if (member && member.roles) {
+        roles = member.roles.map((r) => r.role.key || r.role.name);
+      }
+    }
+
+    return {
+      id: dbUser.id,
+      email: dbUser.email,
+      firstName: dbUser.firstName,
+      lastName: dbUser.lastName,
+      name: `${dbUser.firstName} ${dbUser.lastName}`.trim(),
+      phone: dbUser.phone || undefined,
+      isActive: dbUser.isActive,
+      createdAt: dbUser.createdAt,
+      roles,
+      permissions,
+      organizationId: activeOrgId,
+      organizations: memberships.map((m) => ({
+        id: m.organization.id,
+        name: m.organization.name,
+        slug: m.organization.slug,
+        status: m.organization.status,
+      })),
+    };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('me')
+  @HttpCode(HttpStatus.OK)
+  async updateProfile(
+    @CurrentUser() authUser: AuthenticatedUser,
+    @Body() dto: UpdateProfileDto,
+  ) {
+    const updated = await this.userRepository.update(authUser.id, {
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      phone: dto.phone ?? null,
+      avatarUrl: dto.avatarUrl ?? null,
+    });
+
+    return {
+      id: updated.id,
+      email: updated.email,
+      firstName: updated.firstName,
+      lastName: updated.lastName,
+      name: `${updated.firstName} ${updated.lastName}`.trim(),
+      phone: updated.phone || undefined,
+      avatarUrl: updated.avatarUrl || undefined,
+      isActive: updated.isActive,
+      createdAt: updated.createdAt,
+    };
   }
 }
-

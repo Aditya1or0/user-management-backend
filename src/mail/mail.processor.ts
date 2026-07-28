@@ -27,7 +27,9 @@ export class MailProcessor extends WorkerHost {
   }
 
   async process(job: Job<any, any, string>): Promise<any> {
-    this.logger.log(`Processing background mail job: ${job.name} (id: ${job.id})`);
+    this.logger.log(
+      `Processing background mail job: ${job.name} (id: ${job.id})`,
+    );
 
     switch (job.name) {
       case 'welcome-email':
@@ -35,7 +37,9 @@ export class MailProcessor extends WorkerHost {
       case 'invitation-email':
         return this.handleInvitationEmail(job as Job<InvitationEmailJobData>);
       case 'password-reset-email':
-        return this.handlePasswordResetEmail(job as Job<PasswordResetEmailJobData>);
+        return this.handlePasswordResetEmail(
+          job as Job<PasswordResetEmailJobData>,
+        );
       case 'login-otp-email':
         return this.handleLoginOtpEmail(job as Job<LoginOtpEmailJobData>);
       default:
@@ -43,8 +47,17 @@ export class MailProcessor extends WorkerHost {
     }
   }
 
-  private async handleWelcomeEmail(job: Job<WelcomeEmailJobData>): Promise<boolean> {
-    const { userId, organizationId, email, firstName, organizationName, loginUrl } = job.data;
+  private async handleWelcomeEmail(
+    job: Job<WelcomeEmailJobData>,
+  ): Promise<boolean> {
+    const {
+      userId,
+      organizationId,
+      email,
+      firstName,
+      organizationName,
+      loginUrl,
+    } = job.data;
     try {
       const sent = await this.mailService.sendWelcomeEmail({
         recipientEmail: email,
@@ -71,15 +84,29 @@ export class MailProcessor extends WorkerHost {
           userId,
           action: AuditAction.EMAIL_FAILED,
           entity: AuditEntity.EMAIL,
-          newValue: { type: 'WELCOME_EMAIL', recipient: email, error: error instanceof Error ? error.message : String(error) },
+          newValue: {
+            type: 'WELCOME_EMAIL',
+            recipient: email,
+            error: error instanceof Error ? error.message : String(error),
+          },
         });
       }
       throw error;
     }
   }
 
-  private async handleInvitationEmail(job: Job<InvitationEmailJobData>): Promise<boolean> {
-    const { invitationId, organizationId, email, invitationUrl, organizationName, inviterName, expiresAt } = job.data;
+  private async handleInvitationEmail(
+    job: Job<InvitationEmailJobData>,
+  ): Promise<boolean> {
+    const {
+      invitationId,
+      organizationId,
+      email,
+      invitationUrl,
+      organizationName,
+      inviterName,
+      expiresAt,
+    } = job.data;
     try {
       const sent = await this.mailService.sendInvitationEmail({
         recipientEmail: email,
@@ -95,7 +122,11 @@ export class MailProcessor extends WorkerHost {
           action: AuditAction.EMAIL_SENT,
           entity: AuditEntity.EMAIL,
           entityId: invitationId,
-          newValue: { type: 'INVITATION_EMAIL', recipient: email, jobId: job.id },
+          newValue: {
+            type: 'INVITATION_EMAIL',
+            recipient: email,
+            jobId: job.id,
+          },
         });
       }
       return sent;
@@ -107,15 +138,31 @@ export class MailProcessor extends WorkerHost {
           action: AuditAction.EMAIL_FAILED,
           entity: AuditEntity.EMAIL,
           entityId: invitationId,
-          newValue: { type: 'INVITATION_EMAIL', recipient: email, error: error instanceof Error ? error.message : String(error) },
+          newValue: {
+            type: 'INVITATION_EMAIL',
+            recipient: email,
+            error: error instanceof Error ? error.message : String(error),
+          },
         });
       }
       throw error;
     }
   }
 
-  private async handlePasswordResetEmail(job: Job<PasswordResetEmailJobData>): Promise<boolean> {
-    const { userId, email, resetUrl, otp, firstName, expiresAt } = job.data;
+  private async handlePasswordResetEmail(
+    job: Job<PasswordResetEmailJobData>,
+  ): Promise<boolean> {
+    const {
+      userId,
+      email,
+      resetUrl,
+      otp,
+      firstName,
+      expiresAt,
+      isProvisioning,
+      organizationName,
+      inviterName,
+    } = job.data;
     try {
       const sent = await this.mailService.sendPasswordResetEmail({
         recipientEmail: email,
@@ -123,6 +170,9 @@ export class MailProcessor extends WorkerHost {
         resetUrl,
         otp,
         expiresAt: expiresAt || new Date(Date.now() + 60 * 60 * 1000),
+        isProvisioning,
+        organizationName,
+        inviterName,
       });
 
       if (sent && this.auditService) {
@@ -130,25 +180,38 @@ export class MailProcessor extends WorkerHost {
           userId,
           action: AuditAction.EMAIL_SENT,
           entity: AuditEntity.EMAIL,
-          newValue: { type: 'PASSWORD_RESET_EMAIL', recipient: email, jobId: job.id },
+          newValue: {
+            type: 'PASSWORD_RESET_EMAIL',
+            recipient: email,
+            jobId: job.id,
+          },
         });
       }
       return sent;
     } catch (error) {
-      this.logger.error(`Failed to send password reset email to ${email}`, error);
+      this.logger.error(
+        `Failed to send password reset email to ${email}`,
+        error,
+      );
       if (this.auditService) {
         await this.auditService.record({
           userId,
           action: AuditAction.EMAIL_FAILED,
           entity: AuditEntity.EMAIL,
-          newValue: { type: 'PASSWORD_RESET_EMAIL', recipient: email, error: error instanceof Error ? error.message : String(error) },
+          newValue: {
+            type: 'PASSWORD_RESET_EMAIL',
+            recipient: email,
+            error: error instanceof Error ? error.message : String(error),
+          },
         });
       }
       throw error;
     }
   }
 
-  private async handleLoginOtpEmail(job: Job<LoginOtpEmailJobData>): Promise<boolean> {
+  private async handleLoginOtpEmail(
+    job: Job<LoginOtpEmailJobData>,
+  ): Promise<boolean> {
     const { userId, email, otp, firstName } = job.data;
     try {
       const sent = await this.mailService.sendLoginOtpEmail({
@@ -162,7 +225,11 @@ export class MailProcessor extends WorkerHost {
           userId,
           action: AuditAction.EMAIL_SENT,
           entity: AuditEntity.EMAIL,
-          newValue: { type: 'LOGIN_OTP_EMAIL', recipient: email, jobId: job.id },
+          newValue: {
+            type: 'LOGIN_OTP_EMAIL',
+            recipient: email,
+            jobId: job.id,
+          },
         });
       }
       return sent;
@@ -173,7 +240,11 @@ export class MailProcessor extends WorkerHost {
           userId,
           action: AuditAction.EMAIL_FAILED,
           entity: AuditEntity.EMAIL,
-          newValue: { type: 'LOGIN_OTP_EMAIL', recipient: email, error: error instanceof Error ? error.message : String(error) },
+          newValue: {
+            type: 'LOGIN_OTP_EMAIL',
+            recipient: email,
+            error: error instanceof Error ? error.message : String(error),
+          },
         });
       }
       throw error;

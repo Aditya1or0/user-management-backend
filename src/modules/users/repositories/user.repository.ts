@@ -12,7 +12,10 @@ export class UserRepository {
     return tx || this.defaultPrisma;
   }
 
-  async findByEmail(email: string, tx?: PrismaClientOrTx): Promise<User | null> {
+  async findByEmail(
+    email: string,
+    tx?: PrismaClientOrTx,
+  ): Promise<User | null> {
     return this.getClient(tx).user.findUnique({
       where: { email: email.trim().toLowerCase() },
     });
@@ -24,10 +27,13 @@ export class UserRepository {
     });
   }
 
-  async create(data: Prisma.UserCreateInput, tx?: PrismaClientOrTx): Promise<User> {
+  async create(
+    data: Prisma.UserCreateInput,
+    tx?: PrismaClientOrTx,
+  ): Promise<User> {
     const slugName = `${data.firstName} ${data.lastName}`;
     const publicSlug = data.publicSlug || generatePublicSlug(slugName);
-    
+
     return this.getClient(tx).user.create({
       data: {
         ...data,
@@ -35,5 +41,18 @@ export class UserRepository {
         email: data.email.trim().toLowerCase(),
       },
     });
+  }
+
+  async update(
+    id: string,
+    data: Prisma.UserUpdateInput,
+    tx?: PrismaClientOrTx,
+  ): Promise<User> {
+    // Ensure email normalization if email is being updated
+    const updateData: any = { ...data };
+    if (updateData.email && typeof updateData.email === 'string') {
+      updateData.email = updateData.email.trim().toLowerCase();
+    }
+    return this.getClient(tx).user.update({ where: { id }, data: updateData });
   }
 }

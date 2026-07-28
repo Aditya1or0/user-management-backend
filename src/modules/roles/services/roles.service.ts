@@ -14,6 +14,7 @@ import { RoleResponseDto } from '../dto/role-response.dto';
 import { RoleMatrixResponseDto } from '../dto/role-matrix-response.dto';
 import { PaginatedResponseDto } from '../../../common/dto/paginated-response.dto';
 import { CacheService } from '../../../cache/cache.service';
+import { permissionCacheKeys } from '../../authorization/constants/permission-cache.keys';
 
 @Injectable()
 export class RolesService {
@@ -111,7 +112,7 @@ export class RolesService {
       dto.permissionIds,
     );
 
-    await this.cacheService.deleteByPattern('auth:perms:*');
+    await this.cacheService.deleteByPattern(permissionCacheKeys.userPermissionsPattern());
     return new RoleResponseDto(created);
   }
 
@@ -161,7 +162,7 @@ export class RolesService {
       dto.permissionIds,
     );
 
-    await this.cacheService.deleteByPattern('auth:perms:*');
+    await this.cacheService.deleteByPattern(permissionCacheKeys.userPermissionsPattern());
     return new RoleResponseDto(updated);
   }
 
@@ -183,7 +184,7 @@ export class RolesService {
     }
 
     await this.roleRepository.deleteRole(id, organizationId);
-    await this.cacheService.deleteByPattern('auth:perms:*');
+    await this.cacheService.deleteByPattern(permissionCacheKeys.userPermissionsPattern());
 
     return { message: `Role '${existing.name}' was successfully deleted.` };
   }
@@ -243,7 +244,7 @@ export class RolesService {
       dto.permissionIds,
     );
 
-    await this.cacheService.deleteByPattern('auth:perms:*');
+    await this.cacheService.deleteByPattern(permissionCacheKeys.userPermissionsPattern());
     return new RoleResponseDto(updated);
   }
 
@@ -265,7 +266,7 @@ export class RolesService {
     }
 
     await this.roleRepository.deleteRole(existing.id, organizationId);
-    await this.cacheService.deleteByPattern('auth:perms:*');
+    await this.cacheService.deleteByPattern(permissionCacheKeys.userPermissionsPattern());
 
     return { message: `Role '${existing.name}' was successfully deleted.` };
   }

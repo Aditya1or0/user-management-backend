@@ -10,6 +10,7 @@ import { UpdatePermissionDto } from '../dto/update-permission.dto';
 import { PermissionResponseDto } from '../dto/permission-response.dto';
 import { PaginatedResponseDto } from '../../../common/dto/paginated-response.dto';
 import { CacheService } from '../../../cache/cache.service';
+import { permissionCacheKeys } from '../../authorization/constants/permission-cache.keys';
 
 @Injectable()
 export class PermissionsService {
@@ -38,7 +39,7 @@ export class PermissionsService {
   }
 
   async getPermissionMeta(): Promise<{ modules: string[]; actions: string[] }> {
-    const cacheKey = 'auth:perms:meta';
+    const cacheKey = permissionCacheKeys.permissionMeta();
     const cached = await this.cacheService.get<{ modules: string[]; actions: string[] }>(cacheKey);
     
     if (cached) {
@@ -74,7 +75,8 @@ export class PermissionsService {
       isActive: true,
     });
 
-    await this.cacheService.deleteByPattern('auth:perms:*');
+    await this.cacheService.deleteByPattern(permissionCacheKeys.userPermissionsPattern());
+    await this.cacheService.delete(permissionCacheKeys.permissionMeta());
     return new PermissionResponseDto(created);
   }
 
@@ -109,7 +111,8 @@ export class PermissionsService {
       isActive: dto.isActive !== undefined ? dto.isActive : existing.isActive,
     });
 
-    await this.cacheService.deleteByPattern('auth:perms:*');
+    await this.cacheService.deleteByPattern(permissionCacheKeys.userPermissionsPattern());
+    await this.cacheService.delete(permissionCacheKeys.permissionMeta());
     return new PermissionResponseDto(updated);
   }
 
@@ -127,7 +130,8 @@ export class PermissionsService {
     }
 
     await this.permissionRepository.delete(id);
-    await this.cacheService.deleteByPattern('auth:perms:*');
+    await this.cacheService.deleteByPattern(permissionCacheKeys.userPermissionsPattern());
+    await this.cacheService.delete(permissionCacheKeys.permissionMeta());
 
     return { message: `Permission '${existing.key}' successfully deleted.` };
   }

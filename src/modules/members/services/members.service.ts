@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../../database/database.service';
 import { CacheService } from '../../../cache/cache.service';
+import { permissionCacheKeys } from '../../authorization/constants/permission-cache.keys';
 import { MemberRepository } from '../repositories/member.repository';
 import { MemberQueryDto } from '../dto/member-query.dto';
 import { CreateMemberDto } from '../dto/create-member.dto';
@@ -253,7 +254,7 @@ export class MembersService {
     });
 
     // Invalidate permission cache for the affected user
-    await this.cacheService.delete(`auth:perms:${organizationId}:${member.userId}`);
+    await this.cacheService.delete(permissionCacheKeys.userPermissions(member.userId, organizationId));
 
     const updated = await this.memberRepository.findById(memberId, organizationId);
     return MemberResponseDto.from(updated);
@@ -302,7 +303,7 @@ export class MembersService {
     }
 
     await this.memberRepository.remove(member.id, organizationId);
-    await this.cacheService.delete(`auth:perms:${organizationId}:${member.userId}`);
+    await this.cacheService.delete(permissionCacheKeys.userPermissions(member.userId, organizationId));
   }
 
   // ─── Helpers ─────────────────────────────────────────────────────────────────

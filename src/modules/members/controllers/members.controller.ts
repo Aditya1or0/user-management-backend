@@ -66,8 +66,10 @@ export class MembersController {
   create(
     @CurrentOrgId() orgId: string,
     @Body() dto: CreateMemberDto,
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: any,
   ) {
-    return this.membersService.create(orgId, dto);
+    return this.membersService.create(orgId, dto, user, organization);
   }
 
   /**

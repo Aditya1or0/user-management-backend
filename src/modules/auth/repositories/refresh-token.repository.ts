@@ -24,6 +24,15 @@ export class RefreshTokenRepository {
     });
   }
 
+  async revokeIfActive(id: string, tx?: Prisma.TransactionClient): Promise<boolean> {
+    const client = tx || this.prisma;
+    const res = await client.refreshToken.updateMany({
+      where: { id, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+    return res.count > 0;
+  }
+
   async revokeFamily(sessionId: string, tx?: Prisma.TransactionClient): Promise<void> {
     const client = tx || this.prisma;
     await client.refreshToken.updateMany({

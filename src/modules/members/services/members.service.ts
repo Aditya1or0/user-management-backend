@@ -16,6 +16,7 @@ import { PaginatedResponseDto } from '../../../common/dto/paginated-response.dto
 import { UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { generatePublicSlug } from '../../../common/utils/slug.util';
+import { PasswordResetService } from '../../auth/services/password-reset.service';
 
 @Injectable()
 export class MembersService {
@@ -23,6 +24,7 @@ export class MembersService {
     private readonly memberRepository: MemberRepository,
     private readonly prisma: PrismaService,
     private readonly cacheService: CacheService,
+    private readonly passwordResetService: PasswordResetService,
   ) {}
 
   // ─── List ────────────────────────────────────────────────────────────────────
@@ -61,6 +63,8 @@ export class MembersService {
   async create(
     organizationId: string,
     dto: CreateMemberDto,
+    requestingUser?: any,
+    organization?: any,
   ): Promise<MemberResponseDto> {
     const email = dto.email.trim().toLowerCase();
 
@@ -82,7 +86,7 @@ export class MembersService {
     // Find or create global User
     let user = await this.prisma.user.findUnique({ where: { email } });
     const tempPasswordHash = await bcrypt.hash(
-      `Nimbus!${Math.random().toString(36).slice(2, 10)}`,
+      `KeyMaster!${Math.random().toString(36).slice(2, 10)}`,
       10,
     );
 
@@ -149,6 +153,20 @@ export class MembersService {
           roles: { include: { role: { select: { id: true, name: true, key: true, isSystem: true } } } },
         },
       });
+    });
+
+    // Send a welcome/password setup email using the forgot password flow
+    // Catch errors silently so provisioning still succeeds if email fails
+    const inviterName = requestingUser ? `${requestingUser.firstName} ${requestingUser.lastName}`.trim() : undefined;
+    this.passwordResetService.forgotPassword(
+      { email },
+      {
+        isProvisioning: true,
+        inviterName,
+        organizationName: organization?.name || 'KeyMaster Workspace',
+      }
+    ).catch(err => {
+      console.error('Failed to send password setup email for new member:', err);
     });
 
     return MemberResponseDto.from(orgUser);

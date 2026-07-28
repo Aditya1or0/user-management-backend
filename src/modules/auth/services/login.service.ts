@@ -65,7 +65,7 @@ export class LoginService {
     const organizationId = activeOrganizations.length > 0 ? activeOrganizations[0].id : undefined;
 
     // 5. Generate Session and Tokens via TokenService
-    const { accessToken, refreshToken } = await this.tokenService.createSessionTokens(user, context, organizationId);
+    const { accessToken, refreshToken } = await this.tokenService.createSessionTokens(user, context);
 
     // 6. Record Audit Log
     await this.auditService.record({

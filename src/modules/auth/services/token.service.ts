@@ -7,6 +7,7 @@ import { SessionRepository } from '../repositories/session.repository';
 import { RefreshTokenRepository } from '../repositories/refresh-token.repository';
 import { SessionContext } from '../../../common/types/session-context.interface';
 import { User } from '@prisma/client';
+import { parseDurationToMs } from '../../../common/utils/duration.util';
 
 export interface TokenPair {
   accessToken: string;
@@ -25,45 +26,37 @@ export class TokenService {
     private readonly refreshTokenRepository: RefreshTokenRepository,
   ) {}
 
-  /**
-   * Helper to parse '30d', '15m' etc into milliseconds
-   */
-  private parseExpiration(expiresIn: string): number {
-    const match = expiresIn.match(/^(\d+)([smhd])$/);
-    if (!match) return 30 * 24 * 60 * 60 * 1000; // default 30 days
-    const value = parseInt(match[1], 10);
-    const unit = match[2];
-    switch (unit) {
-      case 's': return value * 1000;
-      case 'm': return value * 60 * 1000;
-      case 'h': return value * 60 * 60 * 1000;
-      case 'd': return value * 24 * 60 * 60 * 1000;
-      default: return 30 * 24 * 60 * 60 * 1000;
-    }
+  private generateRefreshToken(): string {
+    return crypto.randomBytes(32).toString('hex');
   }
 
-  private hashToken(token: string): string {
+  private hashRefreshToken(token: string): string {
     return crypto.createHash('sha256').update(token).digest('hex');
   }
 
-  async createSessionTokens(user: Pick<User, 'id' | 'email'>, context: SessionContext, organizationId?: string): Promise<TokenPair> {
-    const rawRefreshToken = crypto.randomBytes(32).toString('hex');
-    const tokenHash = this.hashToken(rawRefreshToken);
+  private async generateAccessToken(user: Pick<User, 'id' | 'email'>): Promise<string> {
+    const expiresIn = this.configService.getOrThrow<string>('auth.jwtAccessTokenExpiresIn');
+    return this.jwtService.signAsync(
+      { sub: user.id, email: user.email },
+      { expiresIn: expiresIn as any }
+    );
+  }
+
+  async createSessionTokens(user: Pick<User, 'id' | 'email'>, context: SessionContext): Promise<TokenPair> {
+    const rawRefreshToken = this.generateRefreshToken();
+    const tokenHash = this.hashRefreshToken(rawRefreshToken);
     
-    const expiresInString = this.configService.get<string>('auth.refreshTokenExpiresIn') || '30d';
-    const expiresAt = new Date(Date.now() + this.parseExpiration(expiresInString));
+    const expiresInString = this.configService.getOrThrow<string>('auth.refreshTokenExpiresIn');
+    const expiresAt = new Date(Date.now() + parseDurationToMs(expiresInString));
 
     return await this.prisma.$transaction(async (tx) => {
-      // 1. Create Session
+      // 1. Create Session (no longer using organizationId)
       const session = await this.sessionRepository.create(
         {
           userId: user.id,
-          // Require organizationId for backwards compatibility in schema (it's required in schema, though maybe we can pass empty or user's default).
-          // We must ensure the caller passes organizationId, or we use a dummy one if schema allows (it doesn't, it's string).
-          organizationId: organizationId || 'system-session', 
           ipAddress: context.ipAddress,
           userAgent: context.userAgent,
-          expiresAt, // session expires with the initial refresh token
+          expiresAt, 
         },
         tx
       );
@@ -80,17 +73,14 @@ export class TokenService {
       );
 
       // 3. Generate Access Token
-      const accessToken = await this.jwtService.signAsync(
-        { sub: user.id, email: user.email },
-        { expiresIn: (this.configService.get<string>('auth.jwtAccessTokenExpiresIn') || '15m') as any }
-      );
+      const accessToken = await this.generateAccessToken(user);
 
       return { accessToken, refreshToken: rawRefreshToken };
     });
   }
 
   async refreshTokens(rawRefreshToken: string, context: SessionContext): Promise<TokenPair> {
-    const tokenHash = this.hashToken(rawRefreshToken);
+    const tokenHash = this.hashRefreshToken(rawRefreshToken);
 
     return await this.prisma.$transaction(async (tx) => {
       const storedToken = await this.refreshTokenRepository.findByTokenHash(tokenHash, tx);
@@ -119,15 +109,21 @@ export class TokenService {
         throw new UnauthorizedException('Invalid or expired refresh token.');
       }
 
-      // Revoke the OLD token (Token Rotation)
-      await this.refreshTokenRepository.revoke(storedToken.id, tx);
+      // Revoke the OLD token (Token Rotation) with concurrency safety
+      const isRevoked = await this.refreshTokenRepository.revokeIfActive(storedToken.id, tx);
+      if (!isRevoked) {
+        this.logger.warn(`Concurrency clash or reuse detected for session ${session.id}! Revoking entire family.`);
+        await this.refreshTokenRepository.revokeFamily(session.id, tx);
+        await this.sessionRepository.revoke(session.id, tx);
+        throw new UnauthorizedException('Invalid or expired refresh token.');
+      }
 
       // Generate NEW refresh token
-      const newRawRefreshToken = crypto.randomBytes(32).toString('hex');
-      const newTokenHash = this.hashToken(newRawRefreshToken);
+      const newRawRefreshToken = this.generateRefreshToken();
+      const newTokenHash = this.hashRefreshToken(newRawRefreshToken);
       
-      const expiresInString = this.configService.get<string>('auth.refreshTokenExpiresIn') || '30d';
-      const expiresAt = new Date(Date.now() + this.parseExpiration(expiresInString));
+      const expiresInString = this.configService.getOrThrow<string>('auth.refreshTokenExpiresIn');
+      const expiresAt = new Date(Date.now() + parseDurationToMs(expiresInString));
 
       await this.refreshTokenRepository.create(
         {
@@ -139,16 +135,12 @@ export class TokenService {
         tx
       );
 
-      // We need user email for the JWT. Let's fetch the user.
       const user = await tx.user.findUnique({ where: { id: storedToken.userId } });
       if (!user || !user.isActive || user.deletedAt) {
          throw new UnauthorizedException('User account is not active.');
       }
 
-      const accessToken = await this.jwtService.signAsync(
-        { sub: user.id, email: user.email },
-        { expiresIn: (this.configService.get<string>('auth.jwtAccessTokenExpiresIn') || '15m') as any }
-      );
+      const accessToken = await this.generateAccessToken(user);
 
       return { accessToken, refreshToken: newRawRefreshToken };
     });
@@ -156,12 +148,12 @@ export class TokenService {
 
   async revokeRefreshToken(rawRefreshToken: string): Promise<void> {
     if (!rawRefreshToken) return;
-    const tokenHash = this.hashToken(rawRefreshToken);
+    const tokenHash = this.hashRefreshToken(rawRefreshToken);
     
     await this.prisma.$transaction(async (tx) => {
       const storedToken = await this.refreshTokenRepository.findByTokenHash(tokenHash, tx);
       if (storedToken && !storedToken.revokedAt) {
-        await this.refreshTokenRepository.revoke(storedToken.id, tx);
+        await this.refreshTokenRepository.revokeIfActive(storedToken.id, tx);
         await this.sessionRepository.revoke(storedToken.sessionId, tx);
       }
     });

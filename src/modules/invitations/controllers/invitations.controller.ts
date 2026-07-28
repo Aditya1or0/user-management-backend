@@ -11,10 +11,13 @@ import { InvitationsManagementService } from '../services/invitations-management
 import { CreateInvitationDto } from '../dto/create-invitation.dto';
 import { InvitationResponseDto } from '../dto/invitation-response.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { TenantOrgGuard } from '../../authorization/guards/tenant-org.guard';
+import { PermissionsGuard } from '../../authorization/guards/permissions.guard';
+import { RequirePermissions } from '../../authorization/decorators/require-permissions.decorator';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 
 @Controller('invitations')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, TenantOrgGuard, PermissionsGuard)
 export class InvitationsController {
   constructor(
     private readonly invitationsManagementService: InvitationsManagementService,
@@ -22,6 +25,7 @@ export class InvitationsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @RequirePermissions('invitations:create')
   async create(
     @CurrentUser('id') actorId: string,
     @Body() dto: CreateInvitationDto,
@@ -31,6 +35,7 @@ export class InvitationsController {
 
   @Post(':id/revoke')
   @HttpCode(HttpStatus.OK)
+  @RequirePermissions('invitations:delete')
   async revoke(
     @CurrentUser('id') actorId: string,
     @Param('id') invitationId: string,

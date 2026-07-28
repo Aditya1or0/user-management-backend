@@ -1,12 +1,13 @@
-import { InvitationEmailData } from '../interfaces/mail-job.interface';
+import { PasswordResetEmailData } from '../interfaces/mail-job.interface';
 
-export function renderInvitationTemplate(data: InvitationEmailData): { subject: string; html: string; text: string } {
+export function renderPasswordSetupTemplate(data: PasswordResetEmailData): { subject: string; html: string; text: string } {
   const inviter = data.inviterName || 'A team member';
   const org = data.organizationName || 'KeyMaster Workspace';
+  const name = data.firstName || 'User';
   const dateObj = typeof data.expiresAt === 'string' ? new Date(data.expiresAt) : data.expiresAt;
   const expiryFormatted = dateObj.toUTCString();
 
-  const subject = `You've been invited to join ${org} on KeyMaster`;
+  const subject = `Welcome to ${org} on KeyMaster - Setup Your Password`;
 
   const html = `
 <!DOCTYPE html>
@@ -40,23 +41,23 @@ export function renderInvitationTemplate(data: InvitationEmailData): { subject: 
     </div>
     <div class="content">
       <h1 class="title">Workspace Invitation</h1>
-      <p class="text">Hello,</p>
+      <p class="text">Hello ${name},</p>
       <p class="text"><strong>${inviter}</strong> has invited you to join the <strong>${org}</strong> workspace on KeyMaster.</p>
       
       <div class="highlight-box">
         <p class="highlight-text"><strong>Organization:</strong> ${org}</p>
-        <p class="highlight-text" style="margin-top: 4px;"><strong>Expires:</strong> ${expiryFormatted}</p>
+        <p class="highlight-text" style="margin-top: 4px;"><strong>Setup Link Expires:</strong> ${expiryFormatted}</p>
       </div>
 
       <div class="btn-container">
-        <a href="${data.invitationUrl}" class="btn" style="color: #ffffff;" target="_blank">Accept Invitation</a>
+        <a href="${data.resetUrl}" class="btn" style="color: #ffffff;" target="_blank">Setup Password</a>
       </div>
 
-      <p class="text">Clicking the button above will take you to the invitation acceptance page to complete setting up your account.</p>
+      <p class="text">Clicking the button above will take you to the password setup page to complete your account activation.</p>
 
       <div class="fallback">
         <p>If the button doesn't work, copy and paste this URL into your browser:</p>
-        <p><a href="${data.invitationUrl}" style="color: #06b6d4;">${data.invitationUrl}</a></p>
+        <p><a href="${data.resetUrl}" style="color: #06b6d4;">${data.resetUrl}</a></p>
       </div>
     </div>
     <div class="footer">
@@ -70,8 +71,8 @@ export function renderInvitationTemplate(data: InvitationEmailData): { subject: 
 
   const text = `You've been invited to join ${org} on KeyMaster.\n\n` +
     `${inviter} has invited you to join the ${org} workspace.\n\n` +
-    `Accept your invitation here:\n${data.invitationUrl}\n\n` +
-    `This invitation expires on ${expiryFormatted}.`;
+    `Setup your password here:\n${data.resetUrl}\n\n` +
+    `This setup link expires on ${expiryFormatted}.`;
 
   return { subject, html, text };
 }

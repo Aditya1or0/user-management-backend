@@ -15,6 +15,7 @@ import { InvitationsModule } from './modules/invitations/invitations.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AuthorizationModule } from './modules/authorization/authorization.module';
 import { MembersModule } from './modules/members/members.module';
+import { UserPermissionsModule } from './modules/user-permissions/user-permissions.module';
 import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
 
 import appConfig from './config/app.config';
@@ -44,6 +45,7 @@ import { validateEnvironment } from './config/env.validation';
     AuthModule,
     AuthorizationModule,
     MembersModule,
+    UserPermissionsModule,
   ],
   controllers: [AppController],
   providers: [

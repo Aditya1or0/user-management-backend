@@ -6,6 +6,6 @@ export default registerAs('mail', () => ({
   secure: process.env.MAIL_SECURE === 'true',
   user: process.env.MAIL_USER || '',
   pass: process.env.MAIL_PASSWORD || process.env.MAIL_PASS || '',
-  from: process.env.MAIL_FROM || 'Nimbus <noreply@nimbus.io>',
+  from: process.env.MAIL_FROM || 'KeyMaster <noreply@keymaster.io>',
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
 }));

@@ -83,7 +83,7 @@ export class MailProcessor extends WorkerHost {
     try {
       const sent = await this.mailService.sendInvitationEmail({
         recipientEmail: email,
-        organizationName: organizationName || 'Nimbus Workspace',
+        organizationName: organizationName || 'KeyMaster Workspace',
         inviterName,
         invitationUrl,
         expiresAt: expiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),

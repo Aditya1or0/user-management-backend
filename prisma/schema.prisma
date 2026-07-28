@@ -62,6 +62,8 @@ model User {
   passwordResetTokens PasswordResetToken[]
   loginOtps           LoginOtp[]
 
+  permissionOverrides UserPermissionOverride[]
+
   auditLogs     AuditLog[]
   loginAttempts LoginAttempt[]
 
@@ -97,6 +99,7 @@ model Organization {
   sessions    Session[]
 
   loginAttempts LoginAttempt[]
+  permissionOverrides UserPermissionOverride[]
 
   @@index([ownerId])
   @@index([status])
@@ -177,6 +180,7 @@ model Permission {
   isActive    Boolean @default(true)
 
   roles RolePermission[]
+  userOverrides UserPermissionOverride[]
 
   @@index([module])
   @@index([isActive])
@@ -211,7 +215,7 @@ model Session {
   id String @id @default(uuid())
 
   userId         String
-  organizationId String
+  organizationId String?
 
   device  String?
   browser String?
@@ -227,8 +231,8 @@ model Session {
 
   createdAt DateTime @default(now())
 
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   refreshTokens RefreshToken[]
 
@@ -373,4 +377,28 @@ model LoginOtp {
   @@index([expiresAt])
   @@index([usedAt])
   @@map("login_otps")
+}
+
+enum UserPermissionEffect {
+  GRANT
+  DENY
+}
+
+model UserPermissionOverride {
+  userId         String
+  organizationId String
+  permissionId   String
+  effect         UserPermissionEffect
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  permission   Permission   @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([userId, organizationId, permissionId])
+  @@index([organizationId, userId])
+  @@index([organizationId, permissionId])
+  @@map("user_permission_overrides")
 }

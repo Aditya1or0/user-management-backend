@@ -19,6 +19,7 @@ import { UserStatus } from '../../../common/enums/user-status.enum';
 import { AuditAction } from '../../../common/enums/audit-action.enum';
 import { AuditEntity } from '../../../common/enums/audit-entity.enum';
 import { SessionContext } from '../../../common/types/session-context.interface';
+import { PermissionResolutionService } from '../../authorization/services/permission-resolution.service';
 
 @Injectable()
 export class OtpLoginService {
@@ -33,6 +34,7 @@ export class OtpLoginService {
     private readonly tokenService: TokenService,
     private readonly auditService: AuditService,
     private readonly mailQueueService: MailQueueService,
+    private readonly permissionResolutionService: PermissionResolutionService,
   ) {}
 
   async sendLoginOtp(dto: SendLoginOtpDto): Promise<{ message: string }> {
@@ -157,7 +159,19 @@ export class OtpLoginService {
     const organizationId = activeOrganizations.length > 0 ? activeOrganizations[0].id : undefined;
 
     // 6. Generate Session and Tokens via TokenService
-    const { accessToken, refreshToken } = await this.tokenService.createSessionTokens(user, context, organizationId);
+    const { accessToken, refreshToken } = await this.tokenService.createSessionTokens(user, context);
+
+    // Fetch permissions and roles if organizationId is available
+    let permissions: string[] = [];
+    let roles: string[] = [];
+    if (organizationId) {
+      permissions = await this.permissionResolutionService.getGrantedPermissionKeys(user.id, organizationId);
+      
+      const member = await this.organizationUserRepository.findByUserAndOrganization(user.id, organizationId);
+      if (member && member.roles) {
+        roles = member.roles.map(r => r.role.key || r.role.name);
+      }
+    }
 
     // 7. Format clean DTO response
     return {
@@ -171,6 +185,8 @@ export class OtpLoginService {
         phone: user.phone || undefined,
         isActive: user.isActive,
         createdAt: user.createdAt,
+        roles,
+        permissions,
       },
       organizations: activeOrganizations,
     };

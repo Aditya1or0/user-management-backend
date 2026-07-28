@@ -7,12 +7,26 @@ const DEFAULT_PERMISSIONS = [
   { module: 'users', action: 'create', key: 'users:create', description: 'Invite or provision new users' },
   { module: 'users', action: 'update', key: 'users:update', description: 'Modify user details, status, or roles' },
   { module: 'users', action: 'delete', key: 'users:delete', description: 'Soft-delete or purge user accounts' },
+  { module: 'users', action: 'manage_permissions', key: 'users:manage_permissions', description: 'Grant or deny explicit user permission overrides' },
+  
+  { module: 'members', action: 'read', key: 'members:read', description: 'View organization member list' },
+  { module: 'members', action: 'create', key: 'members:create', description: 'Add new members to organization' },
+  { module: 'members', action: 'update', key: 'members:update', description: 'Update member status and roles' },
+  { module: 'members', action: 'delete', key: 'members:delete', description: 'Remove members from organization' },
+
   { module: 'roles', action: 'read', key: 'roles:read', description: 'View role templates and assigned permissions' },
   { module: 'roles', action: 'create', key: 'roles:create', description: 'Design new custom role templates' },
   { module: 'roles', action: 'update', key: 'roles:update', description: 'Edit existing role permissions' },
   { module: 'roles', action: 'delete', key: 'roles:delete', description: 'Remove custom role templates' },
+
   { module: 'permissions', action: 'read', key: 'permissions:read', description: 'Inspect available system action keys' },
   { module: 'permissions', action: 'create', key: 'permissions:create', description: 'Register new action keys' },
+  { module: 'permissions', action: 'update', key: 'permissions:update', description: 'Update existing system action keys' },
+  { module: 'permissions', action: 'delete', key: 'permissions:delete', description: 'Delete system action keys' },
+
+  { module: 'invitations', action: 'create', key: 'invitations:create', description: 'Send organization invitations' },
+  { module: 'invitations', action: 'delete', key: 'invitations:delete', description: 'Revoke organization invitations' },
+
   { module: 'reports', action: 'read', key: 'reports:read', description: 'View security audit trails and log metrics' },
 ];
 

@@ -34,7 +34,7 @@ export class PasswordResetService {
     private readonly mailQueueService: MailQueueService,
   ) {}
 
-  async forgotPassword(dto: ForgotPasswordDto): Promise<{ message: string }> {
+  async forgotPassword(dto: ForgotPasswordDto, context?: { isProvisioning?: boolean; organizationName?: string; inviterName?: string }): Promise<{ message: string }> {
     const normalizedEmail = dto.email.trim().toLowerCase();
 
     // Generic OWASP response message
@@ -95,6 +95,9 @@ export class PasswordResetService {
       otp: rawOtp,
       firstName: user.firstName,
       expiresAt,
+      isProvisioning: context?.isProvisioning,
+      organizationName: context?.organizationName,
+      inviterName: context?.inviterName,
     });
 
     return genericResponse;

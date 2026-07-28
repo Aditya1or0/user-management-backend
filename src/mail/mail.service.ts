@@ -9,6 +9,7 @@ import {
 } from './interfaces/mail-job.interface';
 import { renderInvitationTemplate } from './templates/invitation.template';
 import { renderPasswordResetTemplate } from './templates/password-reset.template';
+import { renderPasswordSetupTemplate } from './templates/password-setup.template';
 import { renderWelcomeTemplate } from './templates/welcome.template';
 import { IEmailProvider, SendEmailPayload } from './providers/email-provider.interface';
 
@@ -25,7 +26,7 @@ export class MailService implements OnModuleInit, IEmailProvider {
     const user = this.configService.get<string>('mail.user') || process.env.MAIL_USER || '';
     const pass = this.configService.get<string>('mail.pass') || process.env.MAIL_PASSWORD || process.env.MAIL_PASS || '';
 
-    this.from = this.configService.get<string>('mail.from') || process.env.MAIL_FROM || 'Nimbus <noreply@nimbus.io>';
+    this.from = this.configService.get<string>('mail.from') || process.env.MAIL_FROM || 'KeyMaster <noreply@keymaster.io>';
 
     this.logger.log(`Initializing Nodemailer transporter (Host: ${host}, Port: ${port}, Secure: ${secure}, User: ${user ? user : 'NONE'})`);
 
@@ -85,7 +86,10 @@ export class MailService implements OnModuleInit, IEmailProvider {
   }
 
   async sendPasswordResetEmail(data: PasswordResetEmailData): Promise<boolean> {
-    const { subject, html, text } = renderPasswordResetTemplate(data);
+    const { subject, html, text } = data.isProvisioning
+      ? renderPasswordSetupTemplate(data)
+      : renderPasswordResetTemplate(data);
+
     return this.sendEmail({
       to: data.recipientEmail,
       subject,
@@ -105,16 +109,25 @@ export class MailService implements OnModuleInit, IEmailProvider {
   }
 
   async sendLoginOtpEmail(data: LoginOtpEmailData): Promise<boolean> {
-    const subject = 'Your Nimbus Login OTP Code';
+    const subject = 'Your KeyMaster Login OTP Code';
     const text = `Your 6-digit Login OTP is: ${data.otp}`;
     const html = `
-      <div style="font-family: sans-serif; padding: 20px; background-color: #09090b; color: #f4f4f5; border-radius: 8px;">
-        <h2 style="color: #06b6d4;">KeyMaster</h2>
-        <p>Your 6-digit Login OTP Code is:</p>
-        <div style="font-family: monospace; font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #06b6d4; margin: 20px 0;">
-          ${data.otp}
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 40px 20px; background-color: #f9fafb; color: #374151;">
+        <div style="max-width: 580px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+          <div style="padding: 32px 32px 24px; border-bottom: 1px solid #f3f4f6; text-align: left;">
+            <div style="display: inline-flex; align-items: center; gap: 8px; font-size: 20px; font-weight: 700; text-decoration: none;">
+              <span style="color: #0891b2;">⌘</span> <span style="color: #374151;">KeyMaster</span>
+            </div>
+          </div>
+          <div style="padding: 32px; line-height: 1.6;">
+            <h1 style="font-size: 22px; font-weight: 700; color: #111827; margin: 0 0 16px;">Login Verification</h1>
+            <p style="font-size: 15px; color: #4b5563; margin: 0 0 24px;">Your 6-digit Login OTP Code is:</p>
+            <div style="background-color: #ecfeff; border: 1px solid #cffafe; padding: 24px; border-radius: 8px; text-align: center; margin: 24px 0;">
+              <div style="font-family: monospace; font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #0891b2; margin: 0;">${data.otp}</div>
+            </div>
+            <p style="font-size: 13px; color: #6b7280; text-align: center;">This code will expire in 10 minutes. Do not share it with anyone.</p>
+          </div>
         </div>
-        <p style="font-size: 12px; color: #71717a;">This code will expire in 10 minutes.</p>
       </div>
     `;
 

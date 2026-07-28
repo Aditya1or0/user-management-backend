@@ -12,6 +12,9 @@ export interface PasswordResetEmailData {
   resetUrl: string;
   otp?: string;
   expiresAt: Date | string;
+  isProvisioning?: boolean;
+  organizationName?: string;
+  inviterName?: string;
 }
 
 export interface WelcomeEmailData {

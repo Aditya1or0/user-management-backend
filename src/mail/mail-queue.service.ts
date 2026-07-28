@@ -36,6 +36,9 @@ export interface PasswordResetEmailJobData {
   otp?: string;
   firstName?: string;
   expiresAt?: Date | string;
+  isProvisioning?: boolean;
+  organizationName?: string;
+  inviterName?: string;
 }
 
 export interface LoginOtpEmailJobData {
@@ -113,7 +116,7 @@ export class MailQueueService {
         this.logger.warn(`BullMQ queue not available. Sending invitation email inline to ${data.email}`);
         await this.mailService.sendInvitationEmail({
           recipientEmail: jobData.email,
-          organizationName: jobData.organizationName || 'Nimbus Workspace',
+          organizationName: jobData.organizationName || 'KeyMaster Workspace',
           inviterName: jobData.inviterName,
           invitationUrl: jobData.invitationUrl,
           expiresAt: jobData.expiresAt!,
@@ -155,6 +158,9 @@ export class MailQueueService {
           resetUrl: jobData.resetUrl,
           otp: jobData.otp,
           expiresAt: jobData.expiresAt!,
+          isProvisioning: jobData.isProvisioning,
+          organizationName: jobData.organizationName,
+          inviterName: jobData.inviterName,
         });
       }
 

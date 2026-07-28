@@ -50,8 +50,9 @@ export class RolesController {
   async getRoleBySlug(
     @CurrentOrgId() orgId: string,
     @Param('slug') slug: string,
-  ): Promise<RoleResponseDto> {
-    return this.rolesService.getRoleBySlug(slug, orgId);
+  ) {
+    const roleDto = await this.rolesService.getRoleBySlug(slug, orgId);
+    return roleDto;
   }
 
   @Post()

@@ -6,6 +6,8 @@ export class UserResponseDto {
   phone?: string;
   isActive: boolean;
   createdAt: Date;
+  roles?: string[];
+  permissions?: string[];
 }
 
 export class OrganizationResponseDto {

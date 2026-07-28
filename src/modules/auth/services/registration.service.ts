@@ -47,6 +47,7 @@ export class RegistrationService {
       const user = await this.userRepository.create(
         {
           email: normalizedEmail,
+          publicSlug: 'user-' + Math.random().toString(36).substring(2, 6),
           passwordHash,
           firstName: dto.firstName,
           lastName: dto.lastName,

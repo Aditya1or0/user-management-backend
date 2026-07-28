@@ -10,6 +10,7 @@ import { UserStatus } from '../../../common/enums/user-status.enum';
 import { AuditAction } from '../../../common/enums/audit-action.enum';
 import { AuditEntity } from '../../../common/enums/audit-entity.enum';
 import { SessionContext } from '../../../common/types/session-context.interface';
+import { PermissionResolutionService } from '../../authorization/services/permission-resolution.service';
 
 @Injectable()
 export class LoginService {
@@ -21,6 +22,7 @@ export class LoginService {
     private readonly passwordService: PasswordService,
     private readonly tokenService: TokenService,
     private readonly auditService: AuditService,
+    private readonly permissionResolutionService: PermissionResolutionService,
   ) {}
 
   async login(dto: LoginDto, context: SessionContext): Promise<LoginResponseDto> {
@@ -65,7 +67,7 @@ export class LoginService {
     const organizationId = activeOrganizations.length > 0 ? activeOrganizations[0].id : undefined;
 
     // 5. Generate Session and Tokens via TokenService
-    const { accessToken, refreshToken } = await this.tokenService.createSessionTokens(user, context, organizationId);
+    const { accessToken, refreshToken } = await this.tokenService.createSessionTokens(user, context);
 
     // 6. Record Audit Log
     await this.auditService.record({
@@ -75,6 +77,18 @@ export class LoginService {
       entityId: user.id,
       newValue: { email: user.email, loggedInAt: new Date() },
     });
+
+    // Fetch permissions and roles if organizationId is available
+    let permissions: string[] = [];
+    let roles: string[] = [];
+    if (organizationId) {
+      permissions = await this.permissionResolutionService.getGrantedPermissionKeys(user.id, organizationId);
+      
+      const member = await this.organizationUserRepository.findByUserAndOrganization(user.id, organizationId);
+      if (member && member.roles) {
+        roles = member.roles.map(r => r.role.key || r.role.name);
+      }
+    }
 
     // 7. Format clean DTO response
     return {
@@ -88,6 +102,8 @@ export class LoginService {
         phone: user.phone || undefined,
         isActive: user.isActive,
         createdAt: user.createdAt,
+        roles,
+        permissions,
       },
       organizations: activeOrganizations,
     };

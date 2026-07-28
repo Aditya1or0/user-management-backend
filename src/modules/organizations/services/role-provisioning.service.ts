@@ -26,16 +26,40 @@ export class RoleProvisioningService {
     }
 
     const definition = SYSTEM_ROLE_DEFINITIONS[roleKey];
-    return this.roleRepository.create(
+    const role = await this.roleRepository.create(
       {
         organization: { connect: { id: organizationId } },
         name: definition.name,
+        publicSlug: definition.key + '-' + Math.random().toString(36).substring(2, 6),
         key: definition.key,
         description: definition.description,
         isSystem: true,
       },
       tx,
     );
+
+    if (roleKey === SystemRole.OWNER) {
+      await this.attachAllPermissionsToRole(role.id, tx);
+    }
+
+    return role;
+  }
+
+  private async attachAllPermissionsToRole(roleId: string, tx?: PrismaClientOrTx) {
+    const client = tx || this.roleRepository['prisma'];
+    const permissions = await client.permission.findMany({
+      where: { isActive: true },
+      select: { id: true },
+    });
+    if (permissions.length > 0) {
+      await client.rolePermission.createMany({
+        data: permissions.map((p) => ({
+          roleId,
+          permissionId: p.id,
+        })),
+        skipDuplicates: true,
+      });
+    }
   }
 
   /**

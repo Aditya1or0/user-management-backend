@@ -23,6 +23,8 @@ import { UsersModule } from '../users/users.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
 import { InvitationsModule } from '../invitations/invitations.module';
 
+import { AuthCookieService } from './services/auth-cookie.service';
+
 @Module({
   imports: [
     UsersModule,
@@ -50,6 +52,7 @@ import { InvitationsModule } from '../invitations/invitations.module';
     OtpLoginService,
     AuthService,
     TokenService,
+    AuthCookieService,
     JwtStrategy,
     PasswordResetTokenRepository,
     LoginOtpRepository,
@@ -65,6 +68,7 @@ import { InvitationsModule } from '../invitations/invitations.module';
     OtpLoginService,
     AuthService,
     TokenService,
+    AuthCookieService,
     JwtStrategy,
     PasswordResetTokenRepository,
     LoginOtpRepository,

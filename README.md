@@ -221,52 +221,13 @@ npm run test:cov
 
 ## 📡 API Endpoints
 
-### 1. Register User & Organization
-`POST /auth/register`
+All API endpoints are documented interactively via Swagger UI. Once the application is running, navigate to:
 
-**Request Body:**
-```json
-{
-  "email": "owner@acme.com",
-  "password": "SecurePassword123!",
-  "firstName": "Jane",
-  "lastName": "Doe",
-  "organizationName": "Acme Corporation"
-}
+```
+http://localhost:3000/api/docs
 ```
 
-**Response (201 Created):**
-```json
-{
-  "user": {
-    "id": "usr_123456",
-    "email": "owner@acme.com",
-    "firstName": "Jane",
-    "lastName": "Doe",
-    "isActive": true,
-    "createdAt": "2026-07-24T17:00:00.000Z"
-  },
-  "organization": {
-    "id": "org_789012",
-    "name": "Acme Corporation",
-    "slug": "acme-corporation",
-    "status": "ACTIVE"
-  }
-}
-```
-
-### 2. Accept Organization Invitation
-`POST /auth/accept-invite`
-
-**Request Body:**
-```json
-{
-  "token": "invitation-secret-token",
-  "password": "SecurePassword123!",
-  "firstName": "John",
-  "lastName": "Smith"
-}
-```
+This Swagger documentation provides a detailed layout of all available resources, request/response models, and allows you to test endpoints directly.
 
 ---
 
